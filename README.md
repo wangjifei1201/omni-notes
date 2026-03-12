@@ -1,4 +1,4 @@
-# 视频AI速记 - B站视频智能分析助手
+# Omni-Notes - 智能视频笔记助手
 
 📝 一款基于AI的B站视频内容分析工具，支持语音转文字、智能摘要、章节划分、思维导图生成、多语言翻译等功能。
 
@@ -37,7 +37,7 @@
 
 ```bash
 # 进入项目目录
-cd bilibili-summarizer
+cd Omni-Notes
 
 # 安装Node依赖
 npm install
@@ -149,7 +149,7 @@ npm start
 ## 📁 项目结构
 
 ```
-bilibili-summarizer/
+Omni-Notes/
 ├── server.js              # 后端服务主文件
 ├── index.html             # 前端界面
 ├── whisper_stream.py      # Whisper流式转录脚本

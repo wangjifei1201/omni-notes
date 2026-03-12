@@ -1,3 +1,12 @@
 /data/
 /node_modules/
 config.json
+server.log
+.vscode/mcp.json
+test-results/group-分组功能测试-创建分组-chromium/error-context.md
+test-results/group-分组功能测试-创建分组-chromium/test-failed-1.png
+test-results/group-分组功能测试-删除分组-chromium/error-context.md
+test-results/group-分组功能测试-删除分组-chromium/test-failed-1.png
+test-results/group-分组功能测试-编辑分组-chromium/error-context.md
+test-results/group-分组功能测试-编辑分组-chromium/test-failed-1.png
+server.log

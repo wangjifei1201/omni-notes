@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>视频AI速记 - B站视频智能分析助手</title>
+    <title>Omni-Notes - 智能视频笔记助手</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
@@ -263,7 +263,7 @@
     <nav class="navbar">
         <div class="logo">
             <div class="logo-icon">📝</div>
-            <span>视频AI速记</span>
+            <span>Omni-Notes</span>
         </div>
         <div class="nav-right">
             <button class="nav-btn" onclick="showSettings()">⚙️ 设置</button>
@@ -362,7 +362,7 @@
             <!-- 输入页面 -->
             <div class="input-page" id="inputPage">
                 <div class="input-header">
-                    <h1>视频AI速记</h1>
+                    <h1>Omni-Notes</h1>
                     <p>粘贴B站视频链接，AI自动转录、生成摘要、整理笔记</p>
                 </div>
 
@@ -592,148 +592,117 @@
         let currentResult = null;
         let history = [];
         let currentConfig = null;
+        let groups = [];
         
-        // IndexedDB 数据库名称和版本
-        const DB_NAME = 'bilibili_summarizer_db';
-        const DB_VERSION = 1;
-        const STORE_NAME = 'history';
-        let db = null;
-        
-        // 初始化 IndexedDB
-        async function initDB() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(DB_NAME, DB_VERSION);
-                
-                request.onerror = () => reject(request.error);
-                request.onsuccess = () => {
-                    db = request.result;
-                    resolve(db);
-                };
-                
-                request.onupgradeneeded = (event) => {
-                    const db = event.target.result;
-                    
-                    // 创建历史记录存储
-                    if (!db.objectStoreNames.contains(STORE_NAME)) {
-                        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
-                        store.createIndex('bvid', 'videoInfo.bvid', { unique: false });
-                        store.createIndex('time', 'time', { unique: false });
-                        store.createIndex('groupId', 'groupId', { unique: false });
-                    }
-                    
-                    // 创建分组存储
-                    if (!db.objectStoreNames.contains('groups')) {
-                        const groupStore = db.createObjectStore('groups', { keyPath: 'id', autoIncrement: true });
-                        groupStore.createIndex('name', 'name', { unique: false });
-                    }
-                };
-            });
+        // 从服务器加载历史记录
+        async function loadHistoryFromServer() {
+            try {
+                const response = await fetch('/api/history');
+                if (!response.ok) throw new Error('加载失败');
+                history = await response.json();
+                return history;
+            } catch (error) {
+                console.error('加载历史记录失败:', error);
+                return [];
+            }
         }
         
-        // 从 IndexedDB 加载历史记录
-        async function loadHistoryFromDB() {
-            if (!db) await initDB();
-            
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction([STORE_NAME], 'readonly');
-                const store = transaction.objectStore(STORE_NAME);
-                const request = store.getAll();
-                
-                request.onsuccess = () => {
-                    // 按时间倒序排列
-                    const items = request.result.sort((a, b) => {
-                        return new Date(b.time) - new Date(a.time);
-                    });
-                    resolve(items);
-                };
-                request.onerror = () => reject(request.error);
-            });
+        // 保存历史记录到服务器
+        async function saveHistoryToServer(data) {
+            try {
+                const response = await fetch('/api/history', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (!response.ok) throw new Error('保存失败');
+                return await response.json();
+            } catch (error) {
+                console.error('保存历史记录失败:', error);
+                throw error;
+            }
         }
         
-        // 保存历史记录到 IndexedDB
-        async function saveHistoryToDB(data) {
-            if (!db) await initDB();
-            
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction([STORE_NAME], 'readwrite');
-                const store = transaction.objectStore(STORE_NAME);
-                
-                // 检查是否已存在相同视频
-                const index = store.index('bvid');
-                const getRequest = index.getAll(data.videoInfo.bvid);
-                
-                getRequest.onsuccess = () => {
-                    const existing = getRequest.result;
-                    
-                    if (existing.length > 0) {
-                        // 更新现有记录（保留 groupId）
-                        const record = existing[0];
-                        const originalGroupId = record.groupId; // 保存原有分组
-                        record.summary = data.summary;
-                        record.keyPoints = data.keyPoints;
-                        record.chapters = data.chapters;
-                        record.mindmap = data.mindmap;
-                        record.transcript = data.transcript;
-                        record.translations = data.translations || {};
-                        record.time = new Date().toLocaleString();
-                        record.groupId = originalGroupId; // 恢复分组信息
-                        
-                        const updateRequest = store.put(record);
-                        updateRequest.onsuccess = () => resolve(record.id);
-                        updateRequest.onerror = () => reject(updateRequest.error);
-                    } else {
-                        // 添加新记录
-                        const record = {
-                            ...data,
-                            time: new Date().toLocaleString()
-                        };
-                        const addRequest = store.add(record);
-                        addRequest.onsuccess = () => resolve(addRequest.result);
-                        addRequest.onerror = () => reject(addRequest.error);
-                    }
-                };
-                
-                getRequest.onerror = () => reject(getRequest.error);
-            });
+        // 从服务器加载分组
+        async function loadGroupsFromServer() {
+            try {
+                const response = await fetch('/api/groups');
+                if (!response.ok) throw new Error('加载失败');
+                groups = await response.json();
+                return groups;
+            } catch (error) {
+                console.error('加载分组失败:', error);
+                return [];
+            }
         }
         
-        // 删除旧的历史记录（保留最近50条）
-        async function cleanupOldHistory() {
-            if (!db) await initDB();
-            
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction([STORE_NAME], 'readwrite');
-                const store = transaction.objectStore(STORE_NAME);
-                const request = store.getAll();
-                
-                request.onsuccess = () => {
-                    const items = request.result;
-                    if (items.length > 50) {
-                        // 按时间排序，删除旧的
-                        items.sort((a, b) => new Date(a.time) - new Date(b.time));
-                        const toDelete = items.slice(0, items.length - 50);
-                        
-                        toDelete.forEach(item => {
-                            store.delete(item.id);
-                        });
-                    }
-                    resolve();
-                };
-                request.onerror = () => reject(request.error);
-            });
+        // 保存分组到服务器
+        async function saveGroupsToServer(groupsData) {
+            try {
+                const response = await fetch('/api/groups', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(groupsData)
+                });
+                if (!response.ok) throw new Error('保存失败');
+                return await response.json();
+            } catch (error) {
+                console.error('保存分组失败:', error);
+                throw error;
+            }
+        }
+        
+        // 更新历史记录分组
+        async function updateHistoryGroup(bvid, groupId) {
+            try {
+                const response = await fetch(`/api/history/${bvid}/group`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ groupId })
+                });
+                if (!response.ok) throw new Error('更新失败');
+                return await response.json();
+            } catch (error) {
+                console.error('更新分组失败:', error);
+                throw error;
+            }
+        }
+        
+        // 保存单个分组
+        async function saveGroup(group) {
+            console.log('[分组] 保存分组:', group.name);
+            if (groups.length === 0) {
+                groups = await loadGroupsFromServer();
+            }
+            if (group.id) {
+                const index = groups.findIndex(g => g.id === group.id);
+                if (index >= 0) groups[index] = group;
+            } else {
+                group.id = Date.now().toString();
+                groups.push(group);
+            }
+            await saveGroupsToServer(groups);
+            console.log('[分组] 保存成功, 当前分组数:', groups.length);
+            return group.id;
+        }
+        
+        // 删除分组
+        async function deleteGroup(groupId) {
+            console.log('[分组] 删除分组:', groupId);
+            if (groups.length === 0) {
+                groups = await loadGroupsFromServer();
+            }
+            groups = groups.filter(g => g.id !== groupId);
+            await saveGroupsToServer(groups);
+            console.log('[分组] 删除成功');
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
-            // 初始化 IndexedDB
-            try {
-                await initDB();
-                console.log('IndexedDB 初始化成功');
-            } catch (error) {
-                console.error('IndexedDB 初始化失败:', error);
-            }
-            
             await loadSettings();
-            await renderGroups();  // 加载分组和历史记录
+            await loadGroupsFromServer();  // 从服务器加载分组
+            await loadHistoryFromServer();  // 从服务器加载历史记录
+            await renderGroups();
+            await renderHistory();
             checkFirstUse();
         });
 
@@ -953,14 +922,13 @@
                 if (step.id === 'analyze') {
                     extraContent = `
                         <div class="analyze-status" id="analyze-status" style="display:none;margin-top:12px;padding:12px;background:var(--bg);border-radius:8px;border:1px solid var(--border);">
-                            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">🤖 AI 分析步骤（4个独立大模型调用）</div>
+                            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">🤖 AI 分析中...</div>
                             <div class="analyze-nodes" id="analyze-nodes" style="font-size:12px;line-height:1.8;color:var(--text);">
-                                <div class="analyze-node" data-node="summary" style="opacity:0.5">📝 步骤1: 生成摘要 <span class="node-status">等待中...</span></div>
-                                <div class="analyze-node" data-node="keypoints" style="opacity:0.5">⭐ 步骤2: 提取核心要点 <span class="node-status">等待中...</span></div>
-                                <div class="analyze-node" data-node="chapters" style="opacity:0.5">📑 步骤3: 划分章节 <span class="node-status">等待中...</span></div>
-                                <div class="analyze-node" data-node="mindmap" style="opacity:0.5">🧠 步骤4: 构建思维导图 <span class="node-status">等待中...</span></div>
+                                <div class="analyze-node" data-node="summary" style="opacity:0.5">📝 生成摘要 <span class="node-status">...</span></div>
+                                <div class="analyze-node" data-node="keypoints" style="opacity:0.5">⭐ 提取要点 <span class="node-status">...</span></div>
+                                <div class="analyze-node" data-node="chapters" style="opacity:0.5">📑 划分章节 <span class="node-status">...</span></div>
+                                <div class="analyze-node" data-node="mindmap" style="opacity:0.5">🧠 构建导图 <span class="node-status">...</span></div>
                             </div>
-                            <div class="analyze-current" id="analyze-current" style="font-size:11px;color:var(--primary);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:none;">当前正在执行...</div>
                         </div>
                     `;
                 }
@@ -1090,6 +1058,38 @@
             if (!url) {
                 showError('请输入视频链接');
                 return;
+            }
+
+            // 提取BV号
+            const bvidMatch = url.match(/BV[a-zA-Z0-9]+/);
+            const bvid = bvidMatch ? bvidMatch[0] : null;
+            
+            if (!bvid) {
+                showError('无法识别的视频链接，请检查链接格式');
+                return;
+            }
+
+            // 检查是否已存在历史记录
+            console.log('[分析] 检查历史记录:', bvid);
+            if (history.length === 0) {
+                history = await loadHistoryFromServer();
+            }
+            
+            const existingRecord = history.find(h => h.videoInfo.bvid === bvid);
+            if (existingRecord) {
+                console.log('[分析] 找到历史记录，直接跳转:', existingRecord.videoInfo.title);
+                
+                // 询问用户是查看历史还是重新分析
+                const choice = confirm(`该视频已分析过！\n\n标题: ${existingRecord.videoInfo.title}\n时间: ${existingRecord.time}\n\n点击「确定」查看历史结果\n点击「取消」重新分析`);
+                
+                if (choice) {
+                    // 查看历史结果
+                    currentResult = existingRecord;
+                    showResult(existingRecord);
+                    return;
+                }
+                // 否则继续重新分析
+                console.log('[分析] 用户选择重新分析');
             }
 
             hideError();
@@ -1347,34 +1347,21 @@
                 }
             }
             
-            // 更新AI分析节点状态
-            if (progress.analyzeNode) {
-                const nodeEl = document.querySelector(`.analyze-node[data-node="${progress.analyzeNode.node}"]`);
-                const currentEl = document.getElementById('analyze-current');
-                if (nodeEl) {
+            // 更新AI分析节点状态（4个步骤同时更新）
+            if (progress.steps && progress.steps.analyze) {
+                const analyzeStatus = progress.steps.analyze.status;
+                document.querySelectorAll('.analyze-node').forEach(nodeEl => {
                     const statusSpan = nodeEl.querySelector('.node-status');
-                    if (progress.analyzeNode.status === 'running') {
+                    if (analyzeStatus === 'running') {
                         nodeEl.style.opacity = '1';
                         nodeEl.style.color = 'var(--primary)';
-                        nodeEl.style.fontWeight = '600';
-                        if (statusSpan) statusSpan.textContent = '执行中...';
-                        // 显示当前执行信息
-                        if (currentEl) {
-                            currentEl.style.display = 'block';
-                            const stepNames = {
-                                'summary': '步骤1: 生成摘要',
-                                'keypoints': '步骤2: 提取核心要点',
-                                'chapters': '步骤3: 划分章节',
-                                'mindmap': '步骤4: 构建思维导图'
-                            };
-                            currentEl.textContent = `⏳ 正在执行: ${stepNames[progress.analyzeNode.node] || progress.analyzeNode.node}`;
-                        }
-                    } else if (progress.analyzeNode.status === 'completed') {
+                        if (statusSpan) statusSpan.textContent = '...';
+                    } else if (analyzeStatus === 'completed') {
                         nodeEl.style.opacity = '1';
                         nodeEl.style.color = 'var(--success)';
-                        if (statusSpan) statusSpan.textContent = '✓ 完成';
+                        if (statusSpan) statusSpan.textContent = '✓';
                     }
-                }
+                });
             }
             
             // 更新进度条
@@ -1884,10 +1871,10 @@
         async function addToHistory(data) {
             try {
                 console.log('[历史记录] 保存数据:', data.videoInfo.title, 'groupId:', data.groupId);
-                await saveHistoryToDB(data);
-                await cleanupOldHistory();
-                await renderGroups();  // 刷新分组和历史记录显示
-                console.log('[历史记录] 保存完成，刷新分组显示');
+                await saveHistoryToServer(data);
+                history = await loadHistoryFromServer();
+                await renderGroups();
+                console.log('[历史记录] 保存完成');
             } catch (error) {
                 console.error('保存历史记录失败:', error);
             }
@@ -1896,7 +1883,9 @@
         // 加载历史记录
         async function loadHistory(index) {
             try {
-                history = await loadHistoryFromDB();
+                if (history.length === 0) {
+                    history = await loadHistoryFromServer();
+                }
                 if (history[index]) {
                     currentResult = history[index];
                     showResult(currentResult);
@@ -1907,113 +1896,7 @@
         }
         
         // ==================== 分组管理功能 ====================
-        let groups = [];
         let draggedItem = null;
-        
-        // 从 IndexedDB 加载分组
-        async function loadGroups() {
-            if (!db) await initDB();
-            
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction(['groups'], 'readonly');
-                const store = transaction.objectStore('groups');
-                const request = store.getAll();
-                
-                request.onsuccess = () => {
-                    groups = request.result || [];
-                    console.log('[分组] 加载了', groups.length, '个分组:', groups);
-                    resolve(groups);
-                };
-                request.onerror = () => reject(request.error);
-            });
-        }
-        
-        // 调试：检查 IndexedDB 数据
-        window.checkDBData = async function() {
-            if (!db) await initDB();
-            
-            console.log('=== IndexedDB 数据检查 ===');
-            
-            // 检查分组
-            const groupsTx = db.transaction(['groups'], 'readonly');
-            const groupsStore = groupsTx.objectStore('groups');
-            groupsStore.getAll().onsuccess = (e) => {
-                console.log('分组数据:', e.target.result);
-            };
-            
-            // 检查历史记录
-            const historyTx = db.transaction([STORE_NAME], 'readonly');
-            const historyStore = historyTx.objectStore(STORE_NAME);
-            historyStore.getAll().onsuccess = (e) => {
-                const items = e.target.result;
-                console.log('历史记录:', items.length, '条');
-                console.log('分组统计:', items.reduce((acc, item) => {
-                    const key = item.groupId || '未分组';
-                    acc[key] = (acc[key] || 0) + 1;
-                    return acc;
-                }, {}));
-            };
-        };
-        
-        console.log('在浏览器控制台运行 checkDBData() 可检查数据');
-        
-        // 保存分组到 IndexedDB
-        async function saveGroup(group) {
-            if (!db) await initDB();
-            
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction(['groups'], 'readwrite');
-                const store = transaction.objectStore('groups');
-                
-                if (group.id) {
-                    const request = store.put(group);
-                    request.onsuccess = () => resolve(group.id);
-                    request.onerror = () => reject(request.error);
-                } else {
-                    const request = store.add(group);
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
-                }
-            });
-        }
-        
-        // 删除分组
-        async function deleteGroup(groupId) {
-            if (!db) await initDB();
-            
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction(['groups'], 'readwrite');
-                const store = transaction.objectStore('groups');
-                const request = store.delete(groupId);
-                
-                request.onsuccess = () => resolve();
-                request.onerror = () => reject(request.error);
-            });
-        }
-        
-        // 更新历史记录的分组
-        async function updateHistoryGroup(historyId, groupId) {
-            if (!db) await initDB();
-            
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction([STORE_NAME], 'readwrite');
-                const store = transaction.objectStore(STORE_NAME);
-                const request = store.get(historyId);
-                
-                request.onsuccess = () => {
-                    const item = request.result;
-                    if (item) {
-                        item.groupId = groupId;
-                        const updateRequest = store.put(item);
-                        updateRequest.onsuccess = () => resolve();
-                        updateRequest.onerror = () => reject(updateRequest.error);
-                    } else {
-                        resolve();
-                    }
-                };
-                request.onerror = () => reject(request.error);
-            });
-        }
         
         // 渲染分组列表
         async function renderGroups() {
@@ -2021,8 +1904,13 @@
             const ungroupedList = document.getElementById('ungroupedList');
             
             try {
-                await loadGroups();
-                const history = await loadHistoryFromDB();
+                // 从服务器加载数据
+                if (groups.length === 0) {
+                    groups = await loadGroupsFromServer();
+                }
+                if (history.length === 0) {
+                    history = await loadHistoryFromServer();
+                }
                 
                 // 按分组组织历史记录
                 const groupedItems = {};
@@ -2056,7 +1944,7 @@
                                 </div>
                                 <div class="group-items">
                                     ${items.map(item => `
-                                        <div class="group-item draggable-item" draggable="true" ondragstart="handleDragStart(event, ${item.id})" ondragend="handleDragEnd(event)" onclick="loadHistory(${item.historyIndex})">
+                                        <div class="group-item draggable-item" draggable="true" ondragstart="handleDragStart(event, ${item.historyIndex})" ondragend="handleDragEnd(event)" onclick="loadHistory(${item.historyIndex})">
                                             <span>🎬</span>
                                             <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.videoInfo.title}</span>
                                         </div>
@@ -2069,7 +1957,7 @@
                 
                 // 渲染未分组任务
                 ungroupedList.innerHTML = ungroupedItems.map(item => `
-                    <div class="group-item draggable-item" draggable="true" ondragstart="handleDragStart(event, ${item.id})" ondragend="handleDragEnd(event)" onclick="loadHistory(${item.historyIndex})">
+                    <div class="group-item draggable-item" draggable="true" ondragstart="handleDragStart(event, ${item.historyIndex})" ondragend="handleDragEnd(event)" onclick="loadHistory(${item.historyIndex})">
                         <span>🎬</span>
                         <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.videoInfo.title}</span>
                     </div>
@@ -2086,8 +1974,9 @@
         }
         
         // 拖拽事件处理
-        function handleDragStart(e, historyId) {
-            draggedItem = historyId;
+        function handleDragStart(e, historyIndex) {
+            draggedItem = historyIndex;
+            console.log('[拖拽] 开始, index:', historyIndex);
             e.target.classList.add('dragging');
             e.dataTransfer.effectAllowed = 'move';
         }
@@ -2118,13 +2007,45 @@
             e.preventDefault();
             document.querySelectorAll('.group-header').forEach(el => el.classList.remove('drag-over'));
             
-            if (draggedItem === null) return;
+            console.log('[拖拽] 放置, groupId:', groupId, 'draggedItem:', draggedItem);
+            
+            if (draggedItem === null) {
+                console.log('[拖拽] 没有拖拽项');
+                return;
+            }
             
             try {
-                await updateHistoryGroup(draggedItem, groupId);
-                await renderGroups();  // 刷新分组显示
+                // 确保数据已加载
+                if (history.length === 0) {
+                    history = await loadHistoryFromServer();
+                }
+                
+                // draggedItem 是 history 数组的索引，需要获取对应的 bvid
+                const historyItem = history[draggedItem];
+                if (!historyItem || !historyItem.videoInfo) {
+                    console.error('[拖拽] 找不到对应的历史记录, index:', draggedItem);
+                    return;
+                }
+                
+                const bvid = historyItem.videoInfo.bvid;
+                console.log('[拖拽] 移动任务:', historyItem.videoInfo.title, '到分组:', groupId);
+                
+                // 调用 API 更新分组
+                await updateHistoryGroup(bvid, groupId);
+                
+                // 更新本地数据
+                historyItem.groupId = groupId;
+                
+                // 重新加载数据确保同步
+                history = await loadHistoryFromServer();
+                groups = await loadGroupsFromServer();
+                
+                // 刷新显示
+                await renderGroups();
+                console.log('[拖拽] 移动成功');
             } catch (error) {
-                console.error('移动任务失败:', error);
+                console.error('[拖拽] 移动任务失败:', error);
+                showError('移动任务失败: ' + error.message);
             }
         }
         
@@ -2143,8 +2064,13 @@
         
         // 编辑分组
         function editGroup(groupId) {
-            const group = groups.find(g => g.id === parseInt(groupId));
-            if (!group) return;
+            console.log('[分组] 点击编辑:', groupId);
+            const group = groups.find(g => g.id === groupId);
+            if (!group) {
+                console.error('[分组] 找不到分组:', groupId);
+                showError('找不到分组');
+                return;
+            }
             
             const newName = prompt('修改分组名称:', group.name);
             if (newName && newName.trim() && newName !== group.name) {
@@ -2153,6 +2079,7 @@
                     renderGroups();
                 }).catch(error => {
                     console.error('更新分组失败:', error);
+                    showError('更新分组失败: ' + error.message);
                 });
             }
         }
@@ -2161,10 +2088,12 @@
         function removeGroup(groupId) {
             if (!confirm('确定要删除这个分组吗？分组内的任务将变为未分组。')) return;
             
-            deleteGroup(parseInt(groupId)).then(() => {
+            console.log('[分组] 点击删除:', groupId);
+            deleteGroup(groupId).then(() => {
                 renderGroups();
             }).catch(error => {
                 console.error('删除分组失败:', error);
+                showError('删除分组失败: ' + error.message);
             });
         }
 
@@ -2332,12 +2261,26 @@
                 // 更新显示
                 showResult(currentResult);
                 
-                // 更新历史记录
+                // 更新历史记录（覆盖保存，保留分组信息）
                 const historyIndex = history.findIndex(h => h.videoInfo.bvid === currentResult.videoInfo.bvid);
                 if (historyIndex >= 0) {
-                    history[historyIndex] = { ...currentResult, time: new Date().toLocaleString() };
-                    await saveHistoryToDB(currentResult);
+                    // 保留原有分组信息
+                    const savedGroupId = history[historyIndex].groupId;
+                    currentResult.groupId = savedGroupId;
+                    
+                    // 更新时间戳
+                    currentResult.time = new Date().toLocaleString();
+                    
+                    // 更新本地历史记录
+                    history[historyIndex] = { ...currentResult };
+                    
+                    // 保存到服务器（覆盖原有数据）
+                    console.log('[重新生成] 覆盖保存历史记录:', currentResult.videoInfo.title);
+                    await saveHistoryToServer(currentResult);
+                    
+                    // 刷新显示
                     await renderGroups();
+                    console.log('[重新生成] 保存完成');
                 }
                 
             } catch (error) {

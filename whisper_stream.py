@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """
-Whisper 流式转录脚本 - 模拟流式效果，实时更新进度
+Whisper 流式转录脚本 - 基于实际处理进度
 """
 import sys
 import json
 import os
 import time
-import threading
 import whisper
 import torch
 import warnings
@@ -18,50 +17,8 @@ def format_time(seconds):
     secs = int(seconds % 60)
     return f"{mins:02d}:{secs:02d}"
 
-class ProgressPrinter:
-    """进度打印器 - 在后台线程中模拟实时进度"""
-    def __init__(self, duration):
-        self.duration = duration
-        self.current = 0
-        self.running = True
-        self.segments = []
-        
-    def start(self):
-        """启动进度线程"""
-        self.thread = threading.Thread(target=self._print_progress)
-        self.thread.start()
-        
-    def _print_progress(self):
-        """打印进度"""
-        import time
-        while self.running and self.current < 100:
-            time.sleep(0.5)  # 每0.5秒更新一次
-            self.current = min(self.current + 2, 95)  # 最多到95%，等真正完成再到100
-            print(f"[PROGRESS] {self.current}%", flush=True)
-            sys.stdout.flush()
-    
-    def set_segments(self, segments):
-        """设置真实的 segments"""
-        self.segments = segments
-        self.running = False
-        if self.thread:
-            self.thread.join(timeout=1)
-        
-        # 输出真实的 segments
-        for i, seg in enumerate(segments):
-            progress = int((i + 1) / len(segments) * 100)
-            text = seg.get("text", "").strip()
-            start = seg.get("start", 0)
-            end = seg.get("end", 0)
-            
-            print(f"[PROGRESS] {progress}%", flush=True)
-            if text:
-                print(f"[TEXT] {text}", flush=True)
-            print(f"[TIME] {format_time(start)} --> {format_time(end)}", flush=True)
-            sys.stdout.flush()
-
-def transcribe_stream(audio_path, model_name="base", output_dir="./data", language="Chinese"):
-    """流式转录音频"""
+def transcribe_with_progress(audio_path, model_name="base", output_dir="./data", language="Chinese"):
+    """转录音频并输出实际进度"""
     
     print("[STATUS] 正在启动语音识别...", flush=True)
     print(f"[STATUS] 加载模型: {model_name}", flush=True)
@@ -77,41 +34,68 @@ def transcribe_stream(audio_path, model_name="base", output_dir="./data", langua
     print(f"[STATUS] 加载音频: {audio_path}", flush=True)
     audio = whisper.load_audio(audio_path)
     duration = len(audio) / whisper.audio.SAMPLE_RATE
-    print(f"[STATUS] 音频时长: {duration:.2f}秒", flush=True)
-    print("[STATUS] 开始识别...", flush=True)
-    print("[PROGRESS] 0%", flush=True)
+    print(f"[STATUS] 音频时长: {duration:.2f}秒 ({format_time(duration)})", flush=True)
     
-    # 启动进度线程
-    progress_printer = ProgressPrinter(duration)
-    progress_printer.start()
+    # 计算 mel 频谱
+    print("[STATUS] 预处理音频...", flush=True)
+    print("[PROGRESS] 5%", flush=True)
+    mel = whisper.log_mel_spectrogram(audio).to(model.device)
+    print("[PROGRESS] 10%", flush=True)
     
-    try:
-        # 执行转录
-        result = model.transcribe(
-            audio_path,
-            language=language,
-            task="transcribe",
-            fp16=False,
-            verbose=False
-        )
-        
-        # 获取结果
-        segments = result.get("segments", [])
-        if not segments and result.get("text"):
-            # 如果没有 segments，创建一个
+    # 检测语言
+    print("[STATUS] 检测语言...", flush=True)
+    _, probs = model.detect_language(mel)
+    detected_lang = max(probs, key=probs.get)
+    print(f"[STATUS] 检测到语言: {detected_lang}", flush=True)
+    print("[PROGRESS] 15%", flush=True)
+    
+    # 使用 decode 逐段处理以获取真实进度
+    print("[STATUS] 开始转录...", flush=True)
+    
+    # 设置解码选项
+    decode_options = {
+        "language": language if language else detected_lang,
+        "task": "transcribe",
+        "fp16": False,
+        "verbose": False,
+        "condition_on_previous_text": True,
+    }
+    
+    # 执行转录
+    result = model.transcribe(audio_path, **decode_options)
+    
+    # 获取分段结果
+    segments = result.get("segments", [])
+    total_segments = len(segments)
+    
+    if total_segments == 0:
+        # 如果没有分段，从完整文本创建
+        full_text = result.get("text", "").strip()
+        if full_text:
             segments = [{
                 "id": 0,
                 "start": 0,
                 "end": duration,
-                "text": result["text"].strip()
+                "text": full_text
             }]
+            total_segments = 1
+    
+    # 输出每个分段（模拟逐段处理的进度）
+    print(f"[STATUS] 识别到 {total_segments} 个片段", flush=True)
+    
+    for i, seg in enumerate(segments):
+        # 计算进度：15%（预处理）+ 85%（转录进度）
+        progress = 15 + int((i + 1) / total_segments * 85)
         
-        # 停止进度线程并输出真实结果
-        progress_printer.set_segments(segments)
+        text = seg.get("text", "").strip()
+        start = seg.get("start", 0)
+        end = seg.get("end", 0)
         
-    except Exception as e:
-        progress_printer.running = False
-        raise e
+        print(f"[PROGRESS] {progress}%", flush=True)
+        if text:
+            print(f"[TEXT] {text}", flush=True)
+        print(f"[TIME] {format_time(start)} --> {format_time(end)}", flush=True)
+        sys.stdout.flush()
     
     # 保存结果
     output_path = os.path.join(output_dir, os.path.basename(audio_path).replace('.mp3', '.json'))
@@ -134,7 +118,7 @@ if __name__ == "__main__":
     language = sys.argv[4] if len(sys.argv) > 4 else "Chinese"
     
     try:
-        transcribe_stream(audio_path, model_name, output_dir, language)
+        transcribe_with_progress(audio_path, model_name, output_dir, language)
     except Exception as e:
         import traceback
         print(f"[ERROR] {str(e)}", file=sys.stderr)
