@@ -1,0 +1,9 @@
+{
+  "aiProvider": "bailian",
+  "apiKey": "your-api-key-here",
+  "baseURL": "https://coding.dashscope.aliyuncs.com/v1",
+  "model": "qwen3.5-plus",
+  "useWhisper": true,
+  "whisperModel": "base",
+  "biliCookie": ""
+}
