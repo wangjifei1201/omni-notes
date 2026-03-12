@@ -170,6 +170,11 @@
         .group-header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--bg-hover); border-radius: 8px; cursor: pointer; transition: all 0.2s; }
         .group-header:hover { background: var(--border); }
         .group-header.drag-over { background: rgba(99, 102, 241, 0.2); border: 2px dashed var(--primary); }
+        .group-toggle { font-size: 12px; transition: transform 0.3s; margin-right: 4px; }
+        .group-toggle.collapsed { transform: rotate(-90deg); }
+        .group-items { transition: all 0.3s ease; overflow: hidden; }
+        .group-items.collapsed { display: none; }
+        .group-section { margin-bottom: 8px; }
         .group-icon { font-size: 16px; }
         .group-name { flex: 1; font-weight: 500; font-size: 14px; }
         .group-count { font-size: 12px; color: var(--text-secondary); background: var(--bg); padding: 2px 8px; border-radius: 10px; }
@@ -1931,18 +1936,21 @@
                 } else {
                     groupsList.innerHTML = groups.map(group => {
                         const items = groupedItems[group.id] || [];
+                        const isCollapsed = group.collapsed ? 'collapsed' : '';
+                        const toggleIcon = group.collapsed ? '▶' : '▼';
                         return `
                             <div class="group-section" data-group-id="${group.id}">
-                                <div class="group-header" ondrop="handleDrop(event, '${group.id}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                                <div class="group-header" onclick="toggleGroup('${group.id}')" ondrop="handleDrop(event, '${group.id}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                                    <span class="group-toggle ${isCollapsed}">${toggleIcon}</span>
                                     <span class="group-icon">📁</span>
                                     <span class="group-name">${group.name}</span>
                                     <span class="group-count">${items.length}</span>
-                                    <div class="group-actions">
+                                    <div class="group-actions" onclick="event.stopPropagation()">
                                         <button class="group-btn" onclick="editGroup('${group.id}')" title="编辑">✏️</button>
                                         <button class="group-btn" onclick="removeGroup('${group.id}')" title="删除">🗑️</button>
                                     </div>
                                 </div>
-                                <div class="group-items">
+                                <div class="group-items ${isCollapsed}" id="group-items-${group.id}">
                                     ${items.map(item => `
                                         <div class="group-item draggable-item" draggable="true" ondragstart="handleDragStart(event, ${item.historyIndex})" ondragend="handleDragEnd(event)" onclick="loadHistory(${item.historyIndex})">
                                             <span>🎬</span>
@@ -2095,6 +2103,24 @@
                 console.error('删除分组失败:', error);
                 showError('删除分组失败: ' + error.message);
             });
+        }
+        
+        // 切换分组折叠状态
+        async function toggleGroup(groupId) {
+            console.log('[分组] 切换折叠:', groupId);
+            
+            // 找到分组
+            const group = groups.find(g => g.id === groupId);
+            if (!group) return;
+            
+            // 切换状态
+            group.collapsed = !group.collapsed;
+            
+            // 保存到服务器
+            await saveGroupsToServer(groups);
+            
+            // 刷新显示
+            await renderGroups();
         }
 
         function openVideo() {
