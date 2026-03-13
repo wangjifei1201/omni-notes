@@ -178,7 +178,7 @@ function parseSubtitle(subtitleData) {
 }
 
 // 下载视频音频（使用yt-dlp）
-async function downloadAudio(bvid, title, progressCallback = null, biliCookie = null) {
+async function downloadAudio(bvid, title, progressCallback = null, biliCookie = null, proxyUrl = null) {
     const safeTitle = title.replace(/[^\w\s]/g, '').substring(0, 50) || 'video';
     const outputPath = path.join(DATA_DIR, `${bvid}_${safeTitle}.mp3`);
     
@@ -228,6 +228,12 @@ async function downloadAudio(bvid, title, progressCallback = null, biliCookie = 
             if (cookieFile) {
                 console.log('[下载] 使用Cookie文件');
                 args.push('--cookies', cookieFile);
+            }
+            
+            // 如果配置了代理，添加代理参数
+            if (proxyUrl) {
+                console.log(`[下载] 使用代理: ${proxyUrl}`);
+                args.push('--proxy', proxyUrl);
             }
             
             args.push(url);
@@ -423,11 +429,22 @@ function parseWhisperResult(whisperData) {
 async function generateAIContent(transcript, videoInfo, config, progressCallback = null) {
     console.log('[AI分析] 开始分析，一次调用生成全部内容...');
     
+    // 计算待分析内容的总字数
+    const transcriptLength = transcript ? transcript.length : 0;
+    const titleLength = videoInfo.title ? videoInfo.title.length : 0;
+    const descLength = videoInfo.description ? videoInfo.description.length : 0;
+    const totalChars = transcriptLength + titleLength + descLength;
+    
+    console.log(`[AI分析] 待分析内容总字数: ${totalChars} 字`);
+    console.log(`[AI分析]   - 视频标题: ${titleLength} 字`);
+    console.log(`[AI分析]   - 视频简介: ${descLength} 字`);
+    console.log(`[AI分析]   - 转录内容: ${transcriptLength} 字`);
+    
     const startTime = Date.now();
     
-    // 发送步骤开始信号
+    // 发送步骤开始信号，同时传递字数信息
     if (progressCallback) {
-        progressCallback('summary', 'running');
+        progressCallback('summary', 'running', { totalChars, titleLength, descLength, transcriptLength });
         progressCallback('keypoints', 'running');
         progressCallback('chapters', 'running');
         progressCallback('mindmap', 'running');
@@ -550,6 +567,17 @@ async function callAIAPI(prompt, config) {
 
 // AI问答
 async function answerQuestion(question, transcript, videoInfo, config) {
+    // 计算待分析内容的总字数
+    const transcriptLength = transcript ? transcript.length : 0;
+    const questionLength = question ? question.length : 0;
+    const titleLength = videoInfo.title ? videoInfo.title.length : 0;
+    const totalChars = Math.min(transcriptLength, 5000) + questionLength + titleLength;
+    
+    console.log(`[AI问答] 待分析内容总字数: ${totalChars} 字`);
+    console.log(`[AI问答]   - 视频标题: ${titleLength} 字`);
+    console.log(`[AI问答]   - 转录内容(前5000字): ${Math.min(transcriptLength, 5000)} 字`);
+    console.log(`[AI问答]   - 用户问题: ${questionLength} 字`);
+    
     const prompt = `基于以下视频内容回答问题。
 
 视频标题：${videoInfo.title}
@@ -930,12 +958,13 @@ async function processAnalysis(analysisId, bvid, useWhisper, config) {
                 
                 // 下载并实时更新进度
                 const biliCookie = config.biliCookie || process.env.BILI_COOKIE || null;
+                const proxyUrl = (config.proxy && config.proxy.enabled) ? config.proxy.url : null;
                 const audioPath = await downloadAudio(bvid, videoInfo.title, (update) => {
                     const prog = analysisProgress.get(analysisId);
                     if (prog) {
                         prog.downloadProgress = update;
                     }
-                }, biliCookie);
+                }, biliCookie, proxyUrl);
                 
                 // 更新进度：开始转录
                 analysisProgress.get(analysisId).currentStep = 'transcribe';
@@ -994,10 +1023,14 @@ async function processAnalysis(analysisId, bvid, useWhisper, config) {
         
         let aiResult;
         try {
-            aiResult = await generateAIContent(transcriptData.fullText, videoInfo, config, (node, status) => {
+            aiResult = await generateAIContent(transcriptData.fullText, videoInfo, config, (node, status, charInfo) => {
                 const prog = analysisProgress.get(analysisId);
                 if (prog) {
                     prog.analyzeNode = { node, status, time: Date.now() };
+                    // 保存字数信息
+                    if (charInfo && charInfo.totalChars) {
+                        prog.charInfo = charInfo;
+                    }
                 }
             });
         } catch (aiError) {

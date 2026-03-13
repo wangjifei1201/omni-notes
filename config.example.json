@@ -5,5 +5,9 @@
   "model": "qwen3.5-plus",
   "useWhisper": true,
   "whisperModel": "base",
-  "biliCookie": ""
+  "biliCookie": "",
+  "proxy": {
+    "enabled": false,
+    "url": "http://127.0.0.1:7890"
+  }
 }

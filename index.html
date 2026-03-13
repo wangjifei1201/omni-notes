@@ -340,6 +340,15 @@
                         <div class="form-hint">如果在云服务器上遇到412错误，请填写B站Cookie。在浏览器登录B站后，按F12打开开发者工具，在Console输入 document.cookie 获取</div>
                     </div>
 
+                    <div class="form-group">
+                        <label class="form-label" style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="proxyEnabled" style="width: auto;">
+                            <span>使用代理下载视频</span>
+                        </label>
+                        <input type="text" class="form-input" id="proxyUrl" placeholder="http://127.0.0.1:7890" disabled>
+                        <div class="form-hint">如果下载视频失败，可配置代理服务器。格式：http://host:port 或 socks5://host:port</div>
+                    </div>
+
                     <button class="btn-primary" onclick="saveSettings()">💾 保存设置</button>
                 </div>
             </div>
@@ -630,6 +639,18 @@
                 document.getElementById('useWhisper').checked = currentConfig.useWhisper || false;
                 document.getElementById('biliCookie').value = currentConfig.biliCookie || '';
                 
+                // 加载代理配置
+                if (currentConfig.proxy) {
+                    document.getElementById('proxyEnabled').checked = currentConfig.proxy.enabled || false;
+                    document.getElementById('proxyUrl').value = currentConfig.proxy.url || '';
+                    document.getElementById('proxyUrl').disabled = !currentConfig.proxy.enabled;
+                }
+                
+                // 监听代理启用开关
+                document.getElementById('proxyEnabled').addEventListener('change', (e) => {
+                    document.getElementById('proxyUrl').disabled = !e.target.checked;
+                });
+                
                 // 检测Whisper模型
                 await detectWhisperModels();
                 
@@ -731,7 +752,11 @@
                 model: document.getElementById('model').value,
                 useWhisper: document.getElementById('useWhisper').checked,
                 whisperModel: document.getElementById('whisperModel').value,
-                biliCookie: document.getElementById('biliCookie').value.trim()
+                biliCookie: document.getElementById('biliCookie').value.trim(),
+                proxy: {
+                    enabled: document.getElementById('proxyEnabled').checked,
+                    url: document.getElementById('proxyUrl').value.trim()
+                }
             };
             try {
                 const response = await fetch('/api/config', {
@@ -817,7 +842,7 @@
                 if (step.id === 'analyze') {
                     extraContent = `
                         <div class="analyze-status" id="analyze-status" style="display:none;margin-top:12px;padding:12px;background:var(--bg);border-radius:8px;border:1px solid var(--border);">
-                            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">🤖 AI 分析中...</div>
+                            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">🤖 AI 分析中... <span id="analyze-char-count" style="color:var(--primary);"></span></div>
                             <div class="analyze-nodes" id="analyze-nodes" style="font-size:12px;line-height:1.8;color:var(--text);">
                                 <div class="analyze-node" data-node="summary" style="opacity:0.5">📝 生成摘要 <span class="node-status">...</span></div>
                                 <div class="analyze-node" data-node="keypoints" style="opacity:0.5">⭐ 提取要点 <span class="node-status">...</span></div>
@@ -1061,6 +1086,8 @@
                 }
 
                 currentResult = result;
+                // 添加时间字段
+                result.time = new Date().toLocaleString();
                 showResult(result);
                 await addToHistory(result);
                 await renderGroups(); // 刷新左侧列表
@@ -1258,6 +1285,14 @@
                         if (statusSpan) statusSpan.textContent = '✓';
                     }
                 });
+                
+                // 显示字数信息
+                if (progress.charInfo && progress.charInfo.totalChars) {
+                    const charCountEl = document.getElementById('analyze-char-count');
+                    if (charCountEl) {
+                        charCountEl.textContent = `(该视频 ${progress.charInfo.totalChars.toLocaleString()} 字)`;
+                    }
+                }
             }
             
             // 更新进度条
