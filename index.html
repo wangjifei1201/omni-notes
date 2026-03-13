@@ -82,27 +82,7 @@
         .quick-action-btn:hover { background: var(--primary); border-color: var(--primary); color: white; }
         .quick-action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         
-        /* 翻译对照展示样式 */
-        .translation-pair { margin-bottom: 16px; }
-        .translation-original { font-size: 15px; line-height: 1.8; color: var(--text); }
-        .translation-translated { 
-            margin-top: 8px; 
-            padding: 12px 16px; 
-            background: rgba(99, 102, 241, 0.08); 
-            border-left: 3px solid var(--primary);
-            border-radius: 0 8px 8px 0;
-            font-size: 13px; 
-            line-height: 1.7; 
-            color: var(--text-secondary);
-        }
-        .translation-translated::before {
-            content: "🌐 翻译";
-            display: block;
-            font-size: 11px;
-            color: var(--primary);
-            margin-bottom: 4px;
-            font-weight: 600;
-        }
+
         .section-translate-btn { 
             float: right; 
             padding: 4px 12px; 
@@ -408,7 +388,7 @@
                             <span id="transcriptSource"></span>
                         </div>
                         <div class="video-quick-actions" id="videoQuickActions" style="display:none;margin-top:12px;">
-                            <button class="quick-action-btn" onclick="showTranslateModal()" title="翻译全部内容">🌐 翻译</button>
+
                             <button class="quick-action-btn" onclick="regenerateAll()" title="重新生成全部内容">🔄 重新生成</button>
                         </div>
                     </div>
@@ -427,33 +407,27 @@
                         <button class="tab-item" onclick="switchTab('qa')">💬 问答</button>
 
                         <button class="tab-item" onclick="switchTab('export')">💾 导出</button>
-                        <button class="tab-item" id="translateTabBtn" onclick="switchTab('translate')" style="display:none;">🌐 翻译</button>
                     </div>
 
                     <div class="tab-content active" id="tab-summary">
                         <div class="summary-header">
-                            <h2 class="summary-title">📝 AI 智能摘要 <span id="summaryTranslateBadge"></span></h2>
+                            <h2 class="summary-title">📝 AI 智能摘要</h2>
                             <div class="summary-actions">
-                                <button class="btn-text" onclick="showTranslateModal()">🌐 翻译全部</button>
                                 <button class="btn-text" onclick="regenerateAll()">🔄 重新生成</button>
                                 <button class="btn-text" onclick="copySummary()">📋 复制</button>
                             </div>
                         </div>
                         <div class="summary-content" id="summaryContent"></div>
                         <div class="key-points">
-                            <h3 style="display:flex;align-items:center;justify-content:space-between;">
-                                <span>⭐ 核心要点 <span id="pointsTranslateBadge"></span></span>
-                                <button class="section-translate-btn" onclick="translateSection('points')">🌐 翻译</button>
-                            </h3>
+                            <h3>⭐ 核心要点</h3>
                             <div class="point-list" id="pointList"></div>
                         </div>
                     </div>
 
                     <div class="tab-content" id="tab-chapters">
                         <div class="summary-header">
-                            <h2 class="summary-title">📑 章节速览 <span id="chaptersTranslateBadge"></span></h2>
+                            <h2 class="summary-title">📑 章节速览</h2>
                             <div class="summary-actions">
-                                <button class="btn-text" onclick="translateSection('chapters')">🌐 翻译</button>
                             </div>
                         </div>
                         <div class="chapters-list" id="chaptersList"></div>
@@ -493,119 +467,24 @@
                             <div class="export-card" onclick="exportFile('json')"><div class="export-icon">📊</div><div class="export-name">JSON</div></div>
                         </div>
                     </div>
-                    
-                    <!-- 翻译标签页 -->
-                    <div class="tab-content" id="tab-translate">
-                        <div class="summary-header">
-                            <h2 class="summary-title">🌐 翻译内容</h2>
-                            <div class="summary-actions">
-                                <select class="form-select" id="translateLangSelect" style="width:auto;margin-right:8px;" onchange="switchTranslateLang(this.value)">
-                                    <option value="">选择语言...</option>
-                                    <option value="en">🇺🇸 English (英语)</option>
-                                    <option value="zh">🇨🇳 中文 (简体)</option>
-                                    <option value="zh-tw">🇹🇼 中文 (繁体)</option>
-                                    <option value="ja">🇯🇵 日本語 (日语)</option>
-                                    <option value="ko">🇰🇷 한국어 (韩语)</option>
-                                    <option value="es">🇪🇸 Español (西班牙语)</option>
-                                    <option value="fr">🇫🇷 Français (法语)</option>
-                                    <option value="de">🇩🇪 Deutsch (德语)</option>
-                                    <option value="ru">🇷🇺 Русский (俄语)</option>
-                                    <option value="ar">🇸🇦 العربية (阿拉伯语)</option>
-                                </select>
-                                <button class="btn-text" onclick="copyTranslation()">📋 复制翻译</button>
-                            </div>
-                        </div>
-                        <div class="translate-tabs" style="display:flex;gap:8px;margin-bottom:16px;">
-                            <button class="btn-text active" id="btn-original" onclick="showTranslateView('original')" style="background:var(--bg-hover);">原文</button>
-                            <button class="btn-text" id="btn-translated" onclick="showTranslateView('translated')" style="opacity:0.5;">翻译</button>
-                        </div>
-                        <div id="translateContent">
-                            <div id="translate-original" style="display:block;">
-                                <div class="summary-content" id="originalSummaryContent"></div>
-                                <div class="key-points"><h3>⭐ 核心要点</h3><div class="point-list" id="originalPointList"></div></div>
-                                <div style="margin-top:24px;"><h3>📑 章节</h3><div class="chapters-list" id="originalChaptersList"></div></div>
-                            </div>
-                            <div id="translate-translated" style="display:none;">
-                                <div id="translatingIndicator" style="text-align:center;padding:40px;">
-                                    <div style="font-size:32px;margin-bottom:16px;">🌐</div>
-                                    <div>请选择目标语言开始翻译</div>
-                                </div>
-                                <div id="translatedContent" style="display:none;">
-                                    <div class="summary-content" id="translatedSummaryContent"></div>
-                                    <div class="key-points"><h3>⭐ 核心要点</h3><div class="point-list" id="translatedPointList"></div></div>
-                                    <div style="margin-top:24px;"><h3>📑 章节</h3><div class="chapters-list" id="translatedChaptersList"></div></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </main>
     </div>
-    
-    <!-- 翻译语言选择弹窗 -->
-    <div id="translateModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:2000;align-items:center;justify-content:center;">
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:32px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;">
-            <h2 style="margin-bottom:24px;font-size:20px;">🌐 选择翻译语言</h2>
-            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:24px;">
-                <button class="lang-btn" onclick="startTranslate('en')" style="padding:16px;border:1px solid var(--border);background:var(--bg);border-radius:10px;cursor:pointer;text-align:left;transition:all 0.3s;">
-                    <div style="font-size:24px;margin-bottom:4px;">🇺🇸</div>
-                    <div style="font-weight:600;">English</div>
-                    <div style="font-size:12px;color:var(--text-secondary);">英语</div>
-                </button>
-                <button class="lang-btn" onclick="startTranslate('zh')" style="padding:16px;border:1px solid var(--border);background:var(--bg);border-radius:10px;cursor:pointer;text-align:left;transition:all 0.3s;">
-                    <div style="font-size:24px;margin-bottom:4px;">🇨🇳</div>
-                    <div style="font-weight:600;">中文</div>
-                    <div style="font-size:12px;color:var(--text-secondary);">简体中文</div>
-                </button>
-                <button class="lang-btn" onclick="startTranslate('zh-tw')" style="padding:16px;border:1px solid var(--border);background:var(--bg);border-radius:10px;cursor:pointer;text-align:left;transition:all 0.3s;">
-                    <div style="font-size:24px;margin-bottom:4px;">🇹🇼</div>
-                    <div style="font-weight:600;">繁體中文</div>
-                    <div style="font-size:12px;color:var(--text-secondary);">繁体中文</div>
-                </button>
-                <button class="lang-btn" onclick="startTranslate('ja')" style="padding:16px;border:1px solid var(--border);background:var(--bg);border-radius:10px;cursor:pointer;text-align:left;transition:all 0.3s;">
-                    <div style="font-size:24px;margin-bottom:4px;">🇯🇵</div>
-                    <div style="font-weight:600;">日本語</div>
-                    <div style="font-size:12px;color:var(--text-secondary);">日语</div>
-                </button>
-                <button class="lang-btn" onclick="startTranslate('ko')" style="padding:16px;border:1px solid var(--border);background:var(--bg);border-radius:10px;cursor:pointer;text-align:left;transition:all 0.3s;">
-                    <div style="font-size:24px;margin-bottom:4px;">🇰🇷</div>
-                    <div style="font-weight:600;">한국어</div>
-                    <div style="font-size:12px;color:var(--text-secondary);">韩语</div>
-                </button>
-                <button class="lang-btn" onclick="startTranslate('es')" style="padding:16px;border:1px solid var(--border);background:var(--bg);border-radius:10px;cursor:pointer;text-align:left;transition:all 0.3s;">
-                    <div style="font-size:24px;margin-bottom:4px;">🇪🇸</div>
-                    <div style="font-weight:600;">Español</div>
-                    <div style="font-size:12px;color:var(--text-secondary);">西班牙语</div>
-                </button>
-                <button class="lang-btn" onclick="startTranslate('fr')" style="padding:16px;border:1px solid var(--border);background:var(--bg);border-radius:10px;cursor:pointer;text-align:left;transition:all 0.3s;">
-                    <div style="font-size:24px;margin-bottom:4px;">🇫🇷</div>
-                    <div style="font-weight:600;">Français</div>
-                    <div style="font-size:12px;color:var(--text-secondary);">法语</div>
-                </button>
-                <button class="lang-btn" onclick="startTranslate('de')" style="padding:16px;border:1px solid var(--border);background:var(--bg);border-radius:10px;cursor:pointer;text-align:left;transition:all 0.3s;">
-                    <div style="font-size:24px;margin-bottom:4px;">🇩🇪</div>
-                    <div style="font-weight:600;">Deutsch</div>
-                    <div style="font-size:12px;color:var(--text-secondary);">德语</div>
-                </button>
-            </div>
-            <button onclick="closeTranslateModal()" style="width:100%;padding:12px;background:var(--bg-hover);border:1px solid var(--border);color:var(--text);border-radius:8px;cursor:pointer;">取消</button>
-        </div>
-    </div>
 
     <script>
-        let currentResult = null;
-        let history = [];
-        let currentConfig = null;
+        // 全局变量声明
+        let analysisHistory = [];
         let groups = [];
+        let currentResult = null;
+        let currentConfig = null;
         
-        // 从服务器加载历史记录
         async function loadHistoryFromServer() {
             try {
                 const response = await fetch('/api/history');
                 if (!response.ok) throw new Error('加载失败');
-                history = await response.json();
-                return history;
+                analysisHistory = await response.json();
+                return analysisHistory;
             } catch (error) {
                 console.error('加载历史记录失败:', error);
                 return [];
@@ -703,11 +582,22 @@
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
+            console.log('[初始化] 开始加载...');
             await loadSettings();
-            await loadGroupsFromServer();  // 从服务器加载分组
-            await loadHistoryFromServer();  // 从服务器加载历史记录
+            console.log('[初始化] 设置加载完成');
+            
+            groups = await loadGroupsFromServer();
+            console.log('[初始化] 分组加载完成:', groups.length, '个');
+            
+            analysisHistory = await loadHistoryFromServer();
+            console.log('[初始化] 历史记录加载完成:', analysisHistory.length, '条');
+            
             await renderGroups();
+            console.log('[初始化] 分组渲染完成');
+            
             await renderHistory();
+            console.log('[初始化] 历史记录渲染完成');
+            
             checkFirstUse();
         });
 
@@ -1076,11 +966,11 @@
 
             // 检查是否已存在历史记录
             console.log('[分析] 检查历史记录:', bvid);
-            if (history.length === 0) {
-                history = await loadHistoryFromServer();
+            if (analysisHistory.length === 0) {
+                analysisHistory = await loadHistoryFromServer();
             }
             
-            const existingRecord = history.find(h => h.videoInfo.bvid === bvid);
+            const existingRecord = analysisHistory.find(h => h.videoInfo.bvid === bvid);
             if (existingRecord) {
                 console.log('[分析] 找到历史记录，直接跳转:', existingRecord.videoInfo.title);
                 
@@ -1172,7 +1062,8 @@
 
                 currentResult = result;
                 showResult(result);
-                addToHistory(result);
+                await addToHistory(result);
+                await renderGroups(); // 刷新左侧列表
                 
                 // 最终更新
                 ANALYSIS_STEPS.forEach(step => setStepStatus(step.id, 'completed'));
@@ -1432,310 +1323,8 @@
             
             // 显示快速操作按钮
             document.getElementById('videoQuickActions').style.display = 'flex';
-            
-            // 填充翻译页面的原文内容
-            fillOriginalContent(data);
-            
-            // 重置翻译状态
-            resetTranslation();
         }
         
-        // 填充翻译页面的原文内容
-        function fillOriginalContent(data) {
-            document.getElementById('originalSummaryContent').innerHTML = data.summary;
-            document.getElementById('originalPointList').innerHTML = data.keyPoints.map((p, i) => {
-                const pointText = typeof p === 'string' ? p : (p.point || p.title || JSON.stringify(p));
-                const detailText = typeof p === 'object' && p.detail ? p.detail : '';
-                return `
-                <div class="point-item">
-                    <div class="point-num">${i + 1}</div>
-                    <div class="point-content">
-                        <div class="point-text">${pointText}</div>
-                        ${detailText ? `<div class="point-detail">${detailText}</div>` : ''}
-                    </div>
-                </div>
-            `}).join('');
-            document.getElementById('originalChaptersList').innerHTML = data.chapters.map(c => `
-                <div class="chapter-card"><span class="chapter-time">${c.time}</span>
-                    <div class="chapter-content"><div class="chapter-title">${c.title}</div><div class="chapter-summary">${c.summary}</div></div>
-                </div>
-            `).join('');
-        }
-        
-        // 重置翻译状态
-        function resetTranslation() {
-            document.getElementById('translateLangSelect').value = '';
-            document.getElementById('translatingIndicator').style.display = 'block';
-            document.getElementById('translatingIndicator').innerHTML = `
-                <div style="font-size:32px;margin-bottom:16px;">🌐</div>
-                <div>请选择目标语言开始翻译</div>
-            `;
-            document.getElementById('translatedContent').style.display = 'none';
-            showTranslateView('original');
-        }
-        
-        // 显示翻译弹窗
-        function showTranslateModal() {
-            if (!currentResult) {
-                showError('没有可翻译的内容');
-                return;
-            }
-            document.getElementById('translateModal').style.display = 'flex';
-        }
-        
-        // 关闭翻译弹窗
-        function closeTranslateModal() {
-            document.getElementById('translateModal').style.display = 'none';
-        }
-        
-        // 语言名称映射
-        const LANG_NAMES = {
-            'en': 'English',
-            'zh': '中文',
-            'zh-tw': '繁體中文',
-            'ja': '日本語',
-            'ko': '한국어',
-            'es': 'Español',
-            'fr': 'Français',
-            'de': 'Deutsch',
-            'ru': 'Русский',
-            'ar': 'العربية'
-        };
-        
-        // 开始翻译 - 全部内容对照展示
-        async function startTranslate(targetLang) {
-            closeTranslateModal();
-            
-            if (!currentResult) {
-                showError('没有可翻译的内容');
-                return;
-            }
-            
-            console.log('[翻译] 开始翻译，目标语言:', targetLang);
-            console.log('[翻译] 当前结果:', currentResult);
-            
-            // 显示翻译中状态
-            const quickActions = document.getElementById('videoQuickActions');
-            const originalActions = quickActions.innerHTML;
-            quickActions.innerHTML = `<button class="quick-action-btn" disabled>🌐 翻译中...</button>`;
-            
-            try {
-                console.log('[翻译] 发送请求到 /api/translate-all');
-                const response = await fetch('/api/translate-all', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        result: currentResult,
-                        targetLang: targetLang
-                    })
-                });
-                
-                console.log('[翻译] 收到响应:', response.status);
-                
-                if (!response.ok) {
-                    const error = await response.json();
-                    console.error('[翻译] 响应错误:', error);
-                    throw new Error(error.error || '翻译失败');
-                }
-                
-                const translated = await response.json();
-                console.log('[翻译] 翻译结果:', translated);
-                
-                // 保存翻译结果
-                currentResult.translations = currentResult.translations || {};
-                currentResult.translations[targetLang] = translated;
-                currentResult.currentTranslation = {
-                    lang: targetLang,
-                    translated: translated
-                };
-                
-                // 显示对照翻译（在摘要标签页）
-                switchTab('summary');
-                showTranslationComparison(translated, targetLang);
-                
-                // 更新按钮
-                quickActions.innerHTML = `
-                    <button class="quick-action-btn" onclick="showTranslateModal()">🌐 翻译</button>
-                    <button class="quick-action-btn" onclick="regenerateAll()">🔄 重新生成</button>
-                    <button class="quick-action-btn" onclick="clearTranslation()">✕ 清除翻译</button>
-                `;
-                
-            } catch (error) {
-                console.error('翻译错误:', error);
-                showError('翻译失败：' + error.message);
-                quickActions.innerHTML = originalActions;
-            }
-        }
-        
-        // 翻译单个区块
-        async function translateSection(section) {
-            if (!currentResult) {
-                showError('没有可翻译的内容');
-                return;
-            }
-            
-            // 显示语言选择弹窗，但只翻译指定区块
-            window.currentTranslateSection = section;
-            showTranslateModal();
-        }
-        
-        // 显示对照翻译
-        function showTranslationComparison(translated, targetLang) {
-            const langName = LANG_NAMES[targetLang] || targetLang;
-            
-            // 添加翻译标记
-            document.getElementById('summaryTranslateBadge').innerHTML = `<span class="translated-badge">🌐 ${langName}</span>`;
-            document.getElementById('pointsTranslateBadge').innerHTML = `<span class="translated-badge">🌐 ${langName}</span>`;
-            document.getElementById('chaptersTranslateBadge').innerHTML = `<span class="translated-badge">🌐 ${langName}</span>`;
-            
-            // 摘要对照展示
-            document.getElementById('summaryContent').innerHTML = `
-                <div class="translation-pair">
-                    <div class="translation-original">${translated.originalSummary || currentResult.summary}</div>
-                    <div class="translation-translated">${translated.summary}</div>
-                </div>
-            `;
-            
-            // 要点对照展示
-            document.getElementById('pointList').innerHTML = (translated.keyPoints || []).map((p, i) => {
-                const pointText = typeof p === 'string' ? p : (p.point || '');
-                const detailText = typeof p === 'object' && p.detail ? p.detail : '';
-                const originalP = translated.originalKeyPoints ? translated.originalKeyPoints[i] : null;
-                const originalPoint = originalP ? (typeof originalP === 'string' ? originalP : (originalP.point || '')) : '';
-                const originalDetail = originalP && typeof originalP === 'object' ? (originalP.detail || '') : '';
-                
-                return `
-                <div class="translation-pair">
-                    <div class="translation-original">
-                        <div style="font-weight:600;">${originalPoint}</div>
-                        ${originalDetail ? `<div style="margin-top:4px;font-size:13px;color:var(--text-secondary);">${originalDetail}</div>` : ''}
-                    </div>
-                    <div class="translation-translated">
-                        <div style="font-weight:600;">${pointText}</div>
-                        ${detailText ? `<div style="margin-top:4px;">${detailText}</div>` : ''}
-                    </div>
-                </div>
-            `}).join('');
-            
-            // 章节对照展示
-            document.getElementById('chaptersList').innerHTML = (translated.chapters || []).map((c, i) => {
-                const originalC = translated.originalChapters ? translated.originalChapters[i] : null;
-                return `
-                <div class="translation-pair">
-                    <div class="translation-original">
-                        <div style="display:flex;gap:12px;">
-                            <span style="color:var(--primary);font-weight:600;min-width:50px;">${c.time}</span>
-                            <div>
-                                <div style="font-weight:600;">${originalC ? originalC.title : ''}</div>
-                                <div style="margin-top:4px;font-size:13px;color:var(--text-secondary);">${originalC ? originalC.summary : ''}</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="translation-translated">
-                        <div style="display:flex;gap:12px;">
-                            <span style="color:var(--primary);font-weight:600;min-width:50px;">${c.time}</span>
-                            <div>
-                                <div style="font-weight:600;">${c.title}</div>
-                                <div style="margin-top:4px;">${c.summary}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `}).join('');
-        }
-        
-        // 清除翻译
-        function clearTranslation() {
-            if (!currentResult) return;
-            
-            // 清除标记
-            document.getElementById('summaryTranslateBadge').innerHTML = '';
-            document.getElementById('pointsTranslateBadge').innerHTML = '';
-            document.getElementById('chaptersTranslateBadge').innerHTML = '';
-            
-            // 恢复原文
-            showResult(currentResult);
-            
-            // 恢复按钮
-            document.getElementById('videoQuickActions').innerHTML = `
-                <button class="quick-action-btn" onclick="showTranslateModal()">🌐 翻译</button>
-                <button class="quick-action-btn" onclick="regenerateAll()">🔄 重新生成</button>
-            `;
-        }
-        
-        // 显示翻译内容
-        function displayTranslatedContent(data) {
-            document.getElementById('translatingIndicator').style.display = 'none';
-            document.getElementById('translatedContent').style.display = 'block';
-            
-            document.getElementById('translatedSummaryContent').innerHTML = data.summary;
-            document.getElementById('translatedPointList').innerHTML = data.keyPoints.map((p, i) => {
-                const pointText = typeof p === 'string' ? p : (p.point || p.title || JSON.stringify(p));
-                const detailText = typeof p === 'object' && p.detail ? p.detail : '';
-                return `
-                <div class="point-item">
-                    <div class="point-num">${i + 1}</div>
-                    <div class="point-content">
-                        <div class="point-text">${pointText}</div>
-                        ${detailText ? `<div class="point-detail">${detailText}</div>` : ''}
-                    </div>
-                </div>
-            `}).join('');
-            document.getElementById('translatedChaptersList').innerHTML = data.chapters.map(c => `
-                <div class="chapter-card"><span class="chapter-time">${c.time}</span>
-                    <div class="chapter-content"><div class="chapter-title">${c.title}</div><div class="chapter-summary">${c.summary}</div></div>
-                </div>
-            `).join('');
-        }
-        
-        // 切换翻译视图（原文/翻译）
-        function showTranslateView(view) {
-            document.getElementById('translate-original').style.display = view === 'original' ? 'block' : 'none';
-            document.getElementById('translate-translated').style.display = view === 'translated' ? 'block' : 'none';
-            
-            document.getElementById('btn-original').style.opacity = view === 'original' ? '1' : '0.5';
-            document.getElementById('btn-translated').style.opacity = view === 'translated' ? '1' : '0.5';
-        }
-        
-        // 切换翻译语言
-        function switchTranslateLang(lang) {
-            if (!lang) return;
-            
-            // 检查是否已有缓存的翻译
-            if (currentResult && currentResult.translations && currentResult.translations[lang]) {
-                displayTranslatedContent(currentResult.translations[lang]);
-                showTranslateView('translated');
-            } else {
-                startTranslate(lang);
-            }
-        }
-        
-        // 复制翻译内容
-        function copyTranslation() {
-            if (!currentResult) return;
-            
-            const lang = document.getElementById('translateLangSelect').value;
-            if (!lang || !currentResult.translations || !currentResult.translations[lang]) {
-                showError('没有可复制的翻译内容');
-                return;
-            }
-            
-            const translated = currentResult.translations[lang];
-            let content = `视频标题: ${currentResult.videoInfo.title}\n\n`;
-            content += `摘要:\n${translated.summary}\n\n`;
-            content += `核心要点:\n`;
-            translated.keyPoints.forEach((p, i) => {
-                const text = typeof p === 'string' ? p : p.point;
-                content += `${i + 1}. ${text}\n`;
-            });
-            content += `\n章节:\n`;
-            translated.chapters.forEach(c => {
-                content += `[${c.time}] ${c.title}: ${c.summary}\n`;
-            });
-            
-            navigator.clipboard.writeText(content);
-        }
-
         async function sendQuestion() {
             const input = document.getElementById('qaInput');
             const question = input.value.trim();
@@ -1847,22 +1436,35 @@
             document.getElementById('errorMessage').classList.remove('active');
         }
 
-        // 渲染历史记录列表 (已弃用，使用 renderGroups 替代)
-        // async function renderHistory() {
-        //     try {
-        //         history = await loadHistoryFromDB();
-        //         const list = document.getElementById('historyList');
-        //         
-        //         if (history.length === 0) {
-        //             list.innerHTML = '<li style="padding:20px;text-align:center;color:var(--text-secondary);">暂无历史记录</li>';
-        //             return;
-        //         }
-        //         
-        //         list.innerHTML = history.map((item, index) => `
-        //             <li class="history-item ${index === 0 ? 'active' : ''}" onclick="loadHistory(${index})">
-        //                 <div class="history-thumb">🎬</div>
-        //                 <div class="history-info">
-        //                     <div class="history-title">${item.videoInfo.title}</div>
+        // 渲染历史记录列表
+        async function renderHistory() {
+            try {
+                if (!Array.isArray(analysisHistory)) {
+                    console.error('[历史记录] analysisHistory 不是数组:', analysisHistory);
+                    analysisHistory = [];
+                }
+                
+                const list = document.getElementById('historyList');
+                if (!list) return;
+                
+                if (analysisHistory.length === 0) {
+                    list.innerHTML = '<li style="padding:20px;text-align:center;color:var(--text-secondary);">暂无历史记录</li>';
+                    return;
+                }
+                
+                list.innerHTML = analysisHistory.map((item, index) => `
+                    <li class="history-item ${index === 0 ? 'active' : ''}" onclick="loadHistory(${index})">
+                        <div class="history-thumb">🎬</div>
+                        <div class="history-info">
+                            <div class="history-title">${item.videoInfo.title}</div>
+                            <div class="history-time">${item.time}</div>
+                        </div>
+                    </li>
+                `).join('');
+            } catch (error) {
+                console.error('渲染历史记录失败:', error);
+            }
+        }
         //                     <div class="history-time">${item.time}</div>
         //                 </div>
         //             </li>
@@ -1877,7 +1479,7 @@
             try {
                 console.log('[历史记录] 保存数据:', data.videoInfo.title, 'groupId:', data.groupId);
                 await saveHistoryToServer(data);
-                history = await loadHistoryFromServer();
+                analysisHistory = await loadHistoryFromServer();
                 await renderGroups();
                 console.log('[历史记录] 保存完成');
             } catch (error) {
@@ -1888,11 +1490,11 @@
         // 加载历史记录
         async function loadHistory(index) {
             try {
-                if (history.length === 0) {
-                    history = await loadHistoryFromServer();
+                if (analysisHistory.length === 0) {
+                    analysisHistory = await loadHistoryFromServer();
                 }
-                if (history[index]) {
-                    currentResult = history[index];
+                if (analysisHistory[index]) {
+                    currentResult = analysisHistory[index];
                     showResult(currentResult);
                 }
             } catch (error) {
@@ -1909,26 +1511,39 @@
             const ungroupedList = document.getElementById('ungroupedList');
             
             try {
+                // 确保数据是数组
+                if (!Array.isArray(groups)) groups = [];
+                if (!Array.isArray(analysisHistory)) analysisHistory = [];
+                
                 // 从服务器加载数据
                 if (groups.length === 0) {
                     groups = await loadGroupsFromServer();
                 }
-                if (history.length === 0) {
-                    history = await loadHistoryFromServer();
+                if (analysisHistory.length === 0) {
+                    analysisHistory = await loadHistoryFromServer();
                 }
+                
+                // 确保数据是数组
+                if (!Array.isArray(groups)) groups = [];
+                if (!Array.isArray(analysisHistory)) analysisHistory = [];
                 
                 // 按分组组织历史记录
                 const groupedItems = {};
                 groups.forEach(g => groupedItems[g.id] = []);
                 const ungroupedItems = [];
                 
-                history.forEach((item, index) => {
+                analysisHistory.forEach((item, index) => {
+                    console.log('[渲染] 处理任务:', index, item.videoInfo?.title, 'groupId:', item.groupId);
                     if (item.groupId && groupedItems[item.groupId]) {
                         groupedItems[item.groupId].push({ ...item, historyIndex: index });
                     } else {
                         ungroupedItems.push({ ...item, historyIndex: index });
                     }
                 });
+                
+                console.log('[渲染] 总任务数:', analysisHistory.length);
+                console.log('[渲染] 已分组任务数:', Object.values(groupedItems).flat().length);
+                console.log('[渲染] 未分组任务数:', ungroupedItems.length);
                 
                 // 渲染分组
                 if (groups.length === 0) {
@@ -1964,12 +1579,19 @@
                 }
                 
                 // 渲染未分组任务
-                ungroupedList.innerHTML = ungroupedItems.map(item => `
-                    <div class="group-item draggable-item" draggable="true" ondragstart="handleDragStart(event, ${item.historyIndex})" ondragend="handleDragEnd(event)" onclick="loadHistory(${item.historyIndex})">
-                        <span>🎬</span>
-                        <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.videoInfo.title}</span>
-                    </div>
-                `).join('');
+                console.log('[渲染] 未分组任务数:', ungroupedItems.length);
+                console.log('[渲染] 未分组任务:', ungroupedItems.map(i => i.videoInfo?.title));
+                
+                if (ungroupedItems.length === 0) {
+                    ungroupedList.innerHTML = '<div style="padding: 12px; text-align: center; color: var(--text-secondary); font-size: 12px;">暂无未分组任务</div>';
+                } else {
+                    ungroupedList.innerHTML = ungroupedItems.map(item => `
+                        <div class="group-item draggable-item" draggable="true" ondragstart="handleDragStart(event, ${item.historyIndex})" ondragend="handleDragEnd(event)" onclick="loadHistory(${item.historyIndex})">
+                            <span>🎬</span>
+                            <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.videoInfo?.title || '无标题'}</span>
+                        </div>
+                    `).join('');
+                }
                 
                 // 添加未分组区域的拖放事件
                 ungroupedList.ondrop = (e) => handleDrop(e, null);
@@ -2024,12 +1646,12 @@
             
             try {
                 // 确保数据已加载
-                if (history.length === 0) {
-                    history = await loadHistoryFromServer();
+                if (analysisHistory.length === 0) {
+                    analysisHistory = await loadHistoryFromServer();
                 }
                 
-                // draggedItem 是 history 数组的索引，需要获取对应的 bvid
-                const historyItem = history[draggedItem];
+                // draggedItem 是 analysisHistory 数组的索引，需要获取对应的 bvid
+                const historyItem = analysisHistory[draggedItem];
                 if (!historyItem || !historyItem.videoInfo) {
                     console.error('[拖拽] 找不到对应的历史记录, index:', draggedItem);
                     return;
@@ -2045,7 +1667,7 @@
                 historyItem.groupId = groupId;
                 
                 // 重新加载数据确保同步
-                history = await loadHistoryFromServer();
+                analysisHistory = await loadHistoryFromServer();
                 groups = await loadGroupsFromServer();
                 
                 // 刷新显示
@@ -2288,17 +1910,17 @@
                 showResult(currentResult);
                 
                 // 更新历史记录（覆盖保存，保留分组信息）
-                const historyIndex = history.findIndex(h => h.videoInfo.bvid === currentResult.videoInfo.bvid);
+                const historyIndex = analysisHistory.findIndex(h => h.videoInfo.bvid === currentResult.videoInfo.bvid);
                 if (historyIndex >= 0) {
                     // 保留原有分组信息
-                    const savedGroupId = history[historyIndex].groupId;
+                    const savedGroupId = analysisHistory[historyIndex].groupId;
                     currentResult.groupId = savedGroupId;
                     
                     // 更新时间戳
                     currentResult.time = new Date().toLocaleString();
                     
                     // 更新本地历史记录
-                    history[historyIndex] = { ...currentResult };
+                    analysisHistory[historyIndex] = { ...currentResult };
                     
                     // 保存到服务器（覆盖原有数据）
                     console.log('[重新生成] 覆盖保存历史记录:', currentResult.videoInfo.title);
@@ -2315,7 +1937,6 @@
             } finally {
                 // 恢复按钮
                 quickActions.innerHTML = `
-                    <button class="quick-action-btn" onclick="showTranslateModal()">🌐 翻译</button>
                     <button class="quick-action-btn" onclick="regenerateAll()">🔄 重新生成</button>
                 `;
             }
@@ -2323,8 +1944,6 @@
 
         document.getElementById('videoUrl').addEventListener('keypress', e => { if (e.key === 'Enter') analyzeVideo(); });
         document.getElementById('qaInput').addEventListener('keypress', e => { if (e.key === 'Enter') sendQuestion(); });
-        
-
     </script>
 </body>
 </html>

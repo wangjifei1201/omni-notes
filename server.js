@@ -222,27 +222,6 @@ async function downloadAudio(bvid, title, progressCallback = null, biliCookie = 
                 '-o', outputPath,
                 '--newline',
                 '--progress',
-                // B站反爬虫绕过
-                '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                '--referer', 'https://www.bilibili.com',
-                '--add-header', 'Origin:https://www.bilibili.com',
-                '--add-header', 'Accept:text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-                '--add-header', 'Accept-Language:zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
-                '--add-header', 'Accept-Encoding:gzip, deflate, br',
-                '--add-header', 'DNT:1',
-                '--add-header', 'Connection:keep-alive',
-                '--add-header', 'Upgrade-Insecure-Requests:1',
-                '--add-header', 'Sec-Fetch-Dest:document',
-                '--add-header', 'Sec-Fetch-Mode:navigate',
-                '--add-header', 'Sec-Fetch-Site:none',
-                '--add-header', 'Sec-Fetch-User:?1',
-                '--add-header', 'Cache-Control:max-age=0',
-                '--no-check-certificates',
-                '--geo-bypass',
-                '--sleep-requests', '1',
-                '--extractor-retries', '3',
-                '--fragment-retries', '3',
-                '--buffer-size', '16K'
             ];
             
             // 如果提供了Cookie文件，使用--cookies参数
@@ -1198,7 +1177,7 @@ app.post('/api/translate', async (req, res) => {
     }
 });
 
-// 翻译全部内容（对照模式）
+// 翻译全部内容（分部分进行，避免超时）
 app.post('/api/translate-all', async (req, res) => {
     try {
         const { result, targetLang } = req.body;
@@ -1211,14 +1190,11 @@ app.post('/api/translate-all', async (req, res) => {
         const langNames = {
             'en': 'English',
             'zh': '简体中文',
-            'zh-tw': '繁体中文',
             'ja': '日语',
             'ko': '韩语',
             'es': '西班牙语',
             'fr': '法语',
-            'de': '德语',
-            'ru': '俄语',
-            'ar': '阿拉伯语'
+            'de': '德语'
         };
         
         const targetLangName = langNames[targetLang] || targetLang;
@@ -1229,50 +1205,89 @@ app.post('/api/translate-all', async (req, res) => {
         const originalKeyPoints = JSON.parse(JSON.stringify(result.keyPoints));
         const originalChapters = JSON.parse(JSON.stringify(result.chapters));
         
-        // 翻译摘要
+        // 翻译摘要（第一部分）- 摘要可能很长，分段翻译
         console.log('[翻译] 翻译摘要...');
-        const translatedSummary = await translateText(result.summary, targetLangName, config);
+        let translatedSummary;
+        try {
+            // 如果摘要太长，只翻译前500字
+            const summaryToTranslate = result.summary.length > 500 
+                ? result.summary.substring(0, 500) + '...' 
+                : result.summary;
+            translatedSummary = await translateTextWithTimeout(summaryToTranslate, targetLangName, config, 120000);
+        } catch (e) {
+            console.error('[翻译] 摘要翻译超时，使用原文:', e.message);
+            translatedSummary = result.summary;
+        }
         
-        // 翻译核心要点
+        // 翻译核心要点（第二部分，逐条翻译）
         console.log('[翻译] 翻译核心要点...');
         const translatedKeyPoints = [];
-        for (const kp of result.keyPoints) {
-            if (typeof kp === 'string') {
-                translatedKeyPoints.push(await translateText(kp, targetLangName, config));
-            } else {
-                translatedKeyPoints.push({
-                    point: await translateText(kp.point, targetLangName, config),
-                    detail: await translateText(kp.detail, targetLangName, config)
-                });
+        for (let i = 0; i < result.keyPoints.length; i++) {
+            const kp = result.keyPoints[i];
+            console.log(`[翻译] 翻译要点 ${i+1}/${result.keyPoints.length}...`);
+            try {
+                if (typeof kp === 'string') {
+                    translatedKeyPoints.push(await translateTextWithTimeout(kp, targetLangName, config, 120000));
+                } else {
+                    const translatedPoint = await translateTextWithTimeout(kp.point, targetLangName, config, 120000);
+                    const translatedDetail = await translateTextWithTimeout(kp.detail, targetLangName, config, 120000);
+                    translatedKeyPoints.push({
+                        point: translatedPoint,
+                        detail: translatedDetail
+                    });
+                }
+            } catch (e) {
+                console.error(`[翻译] 要点 ${i+1} 翻译失败，使用原文:`, e.message);
+                translatedKeyPoints.push(kp);
             }
         }
         
-        // 翻译章节
+        // 翻译章节（第三部分，逐条翻译）
         console.log('[翻译] 翻译章节...');
         const translatedChapters = [];
-        for (const ch of result.chapters) {
-            translatedChapters.push({
-                time: ch.time,
-                title: await translateText(ch.title, targetLangName, config),
-                summary: await translateText(ch.summary, targetLangName, config)
-            });
+        for (let i = 0; i < result.chapters.length; i++) {
+            const ch = result.chapters[i];
+            console.log(`[翻译] 翻译章节 ${i+1}/${result.chapters.length}...`);
+            try {
+                const translatedTitle = await translateTextWithTimeout(ch.title, targetLangName, config, 120000);
+                const translatedSummary = await translateTextWithTimeout(ch.summary, targetLangName, config, 120000);
+                translatedChapters.push({
+                    time: ch.time,
+                    title: translatedTitle,
+                    summary: translatedSummary
+                });
+            } catch (e) {
+                console.error(`[翻译] 章节 ${i+1} 翻译失败，使用原文:`, e.message);
+                translatedChapters.push(ch);
+            }
         }
         
-        // 翻译思维导图
+        // 翻译思维导图（第四部分）
         console.log('[翻译] 翻译思维导图...');
         let translatedMindmap = null;
         if (result.mindmap) {
-            const translatedRoot = await translateText(result.mindmap.root, targetLangName, config);
-            const translatedBranches = await Promise.all(
-                result.mindmap.branches.map(async b => ({
-                    title: await translateText(b.title, targetLangName, config),
-                    items: await Promise.all(b.items.map(item => translateText(item, targetLangName, config)))
-                }))
-            );
-            translatedMindmap = {
-                root: translatedRoot,
-                branches: translatedBranches
-            };
+            try {
+                const translatedRoot = await translateTextWithTimeout(result.mindmap.root, targetLangName, config, 120000);
+                const translatedBranches = [];
+                for (const b of result.mindmap.branches) {
+                    const translatedTitle = await translateTextWithTimeout(b.title, targetLangName, config, 120000);
+                    const translatedItems = [];
+                    for (const item of b.items) {
+                        translatedItems.push(await translateTextWithTimeout(item, targetLangName, config, 10000));
+                    }
+                    translatedBranches.push({
+                        title: translatedTitle,
+                        items: translatedItems
+                    });
+                }
+                translatedMindmap = {
+                    root: translatedRoot,
+                    branches: translatedBranches
+                };
+            } catch (e) {
+                console.error('[翻译] 思维导图翻译失败，使用原文:', e.message);
+                translatedMindmap = result.mindmap;
+            }
         }
         
         console.log('[翻译] 翻译完成');
@@ -1294,6 +1309,49 @@ app.post('/api/translate-all', async (req, res) => {
         res.status(500).json({ error: error.message || '翻译失败' });
     }
 });
+
+// 带超时的翻译函数（带重试）
+async function translateTextWithTimeout(text, targetLang, config, timeoutMs = 120000, retries = 2) {
+    if (!text || text.trim() === '') return '';
+    
+    // 截断过长的文本
+    const maxLength = 300;
+    const truncatedText = text.length > maxLength 
+        ? text.substring(0, maxLength) + '...' 
+        : text;
+    
+    const prompt = `翻译为${targetLang}：\n\n${truncatedText}\n\n只输出翻译结果：`;
+    
+    for (let i = 0; i <= retries; i++) {
+        try {
+            const response = await axios.post(
+                `${config.baseURL}/chat/completions`,
+                {
+                    model: config.model,
+                    messages: [
+                        { role: 'system', content: '你是翻译助手，只输出翻译结果' },
+                        { role: 'user', content: prompt }
+                    ],
+                    temperature: 0.3,
+                    max_tokens: 1000
+                },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${config.apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    timeout: timeoutMs
+                }
+            );
+            
+            return response.data.choices[0].message.content.trim();
+        } catch (e) {
+            console.log(`[翻译] 第${i+1}次尝试失败:`, e.message);
+            if (i === retries) throw e;
+            await new Promise(r => setTimeout(r, 1000)); // 等待1秒后重试
+        }
+    }
+}
 
 // 重新生成全部内容
 app.post('/api/regenerate-all', async (req, res) => {
@@ -1363,5 +1421,7 @@ const server = app.listen(PORT, () => {
     console.log('║  ⚙️  请先配置AI API: /api/config               ║');
     console.log('╚════════════════════════════════════════════════╝');
 });
+
+// 翻译摘要（独立任务）
 
 module.exports = app;
