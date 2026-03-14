@@ -560,7 +560,7 @@ ${transcript.substring(0, 8000)}
 6. 输出必须是合法JSON`;
 
     try {
-        const response = await callAIAPI(prompt);
+        const response = await callAIAPI(prompt, config);
         
         // 解析JSON
         const jsonMatch = response.match(/\{[\s\S]*\}/);
@@ -1237,7 +1237,7 @@ app.post('/api/translate', async (req, res) => {
         
         // 翻译摘要
         console.log('[翻译] 翻译摘要...');
-        const translatedSummary = await translateText(result.summary, targetLangName);
+        const translatedSummary = await translateText(result.summary, targetLangName, config);
         
         // 翻译核心要点
         console.log('[翻译] 翻译核心要点...');
