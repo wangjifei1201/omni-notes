@@ -9,5 +9,7 @@
   "proxy": {
     "enabled": false,
     "url": "http://127.0.0.1:7890"
-  }
+  },
+  "systemPython": "python",
+  "whisperCmd": "whisper"
 }
