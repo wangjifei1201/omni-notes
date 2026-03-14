@@ -7,9 +7,6 @@ const { exec, spawn } = require('child_process');
 const util = require('util');
 const execPromise = util.promisify(exec);
 
-// Python路径配置
-const SYSTEM_PYTHON = 'python3';  // 系统python（有yt-dlp）
-const WHISPER_CMD = '/Library/Frameworks/Python.framework/Versions/3.8/bin/whisper';
 
 const app = express();
 app.use(cors());
@@ -70,7 +67,9 @@ const DEFAULT_CONFIG = {
     model: 'qwen3.5-plus',
     useWhisper: false,
     whisperModel: 'base',
-    biliCookie: ''  // B站Cookie，用于下载视频时绕过412错误
+    biliCookie: '',  // B站Cookie，用于下载视频时绕过412错误
+    systemPython: 'python3',  // 系统python（有yt-dlp）
+    whisperCmd: '/Library/Frameworks/Python.framework/Versions/3.8/bin/whisper'  // Whisper命令路径
 };
 
 // 加载配置
@@ -178,7 +177,7 @@ function parseSubtitle(subtitleData) {
 }
 
 // 下载视频音频（使用yt-dlp）
-async function downloadAudio(bvid, title, progressCallback = null, biliCookie = null, proxyUrl = null) {
+async function downloadAudio(bvid, title, progressCallback = null, biliCookie = null, proxyUrl = null, config = null) {
     const safeTitle = title.replace(/[^\w\s]/g, '').substring(0, 50) || 'video';
     const outputPath = path.join(DATA_DIR, `${bvid}_${safeTitle}.mp3`);
     
@@ -238,9 +237,10 @@ async function downloadAudio(bvid, title, progressCallback = null, biliCookie = 
             
             args.push(url);
             
-            console.log(`[下载] 执行命令: ${SYSTEM_PYTHON} ${args.join(' ')}`);
+            const systemPython = config && config.systemPython ? config.systemPython : 'python3';
+            console.log(`[下载] 执行命令: ${systemPython} ${args.join(' ')}`);
             
-            const process = spawn(SYSTEM_PYTHON, args);
+            const process = spawn(systemPython, args);
             let lastProgress = '';
             let errorOutput = '';
             
@@ -309,7 +309,7 @@ async function downloadAudio(bvid, title, progressCallback = null, biliCookie = 
 }
 
 // 语音转文字（使用Whisper）
-async function transcribeAudio(audioPath, whisperModel = 'base', progressCallback = null) {
+async function transcribeAudio(audioPath, whisperModel = 'base', progressCallback = null, config = null) {
     const outputPath = audioPath.replace('.mp3', '.json');
     
     try {
@@ -332,10 +332,11 @@ async function transcribeAudio(audioPath, whisperModel = 'base', progressCallbac
             'Chinese'
         ];
         
-        console.log(`[转录] 执行命令: ${SYSTEM_PYTHON} ${args.join(' ')}`);
+        const systemPython = config && config.systemPython ? config.systemPython : 'python3';
+        console.log(`[转录] 执行命令: ${systemPython} ${args.join(' ')}`);
         
         return new Promise((resolve, reject) => {
-            const process = spawn(SYSTEM_PYTHON, args);
+            const process = spawn(systemPython, args);
             let lastText = '';  // 最新识别的文本
             let progressPercent = 0;  // 进度百分比
             let lastTime = '';  // 最后时间
@@ -380,15 +381,68 @@ async function transcribeAudio(audioPath, whisperModel = 'base', progressCallbac
                 }
             });
             
+            let errorOutput = '';  // 收集错误输出
+            
             process.stderr.on('data', (data) => {
                 const text = data.toString();
-                console.log(`[转录 stderr] ${text.trim()}`);
+                errorOutput += text;  // 收集错误信息
+                const lines = text.split('\n');
+                
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+                    
+                    console.log(`[转录 stderr] ${line.trim()}`);
+                    
+                    // 解析Whisper真实进度 (格式: "24%|██▍       | 14332/59498")
+                    const realProgressMatch = line.match(/^(\d+)%\|/);
+                    if (realProgressMatch) {
+                        const realPercent = parseInt(realProgressMatch[1]);
+                        // 优先使用真实进度，如果真实进度高于当前进度则更新
+                        if (realPercent > progressPercent) {
+                            progressPercent = realPercent;
+                            
+                            // 立即发送进度更新
+                            if (progressCallback) {
+                                progressCallback({
+                                    type: 'progress',
+                                    percent: progressPercent,
+                                    time: lastTime,
+                                    text: lastText,
+                                    raw: line.trim()
+                                });
+                            }
+                        }
+                    }
+                }
             });
             
             process.on('close', async (code) => {
                 console.log(`[转录] 进程退出码: ${code}`);
                 if (code !== 0) {
-                    reject(new Error(`Whisper 进程退出码 ${code}`));
+                    // 提取关键错误信息
+                    let errorMessage = `Whisper 进程退出码 ${code}`;
+                    
+                    // 检查 SSL 证书错误
+                    if (errorOutput.includes('SSL') || errorOutput.includes('CERTIFICATE_VERIFY_FAILED')) {
+                        errorMessage = 'SSL 证书验证失败，无法下载 Whisper 模型。请检查网络连接或手动下载模型。';
+                    } else if (errorOutput.includes('urlopen error')) {
+                        errorMessage = '网络连接失败，无法下载 Whisper 模型。请检查网络连接。';
+                    } else if (errorOutput.includes('No such file')) {
+                        errorMessage = '找不到音频文件或模型文件。';
+                    } else if (errorOutput.includes('[ERROR]')) {
+                        // 提取 [ERROR] 后的内容
+                        const errorMatch = errorOutput.match(/\[ERROR\]\s*(.+)/);
+                        if (errorMatch) {
+                            errorMessage = errorMatch[1].trim();
+                        }
+                    }
+                    
+                    // 如果错误信息太长，截取前200字符
+                    if (errorMessage.length > 200) {
+                        errorMessage = errorMessage.substring(0, 200) + '...';
+                    }
+                    
+                    reject(new Error(errorMessage));
                     return;
                 }
                 try {
@@ -964,7 +1018,7 @@ async function processAnalysis(analysisId, bvid, useWhisper, config) {
                     if (prog) {
                         prog.downloadProgress = update;
                     }
-                }, biliCookie, proxyUrl);
+                }, biliCookie, proxyUrl, config);
                 
                 // 更新进度：开始转录
                 analysisProgress.get(analysisId).currentStep = 'transcribe';
@@ -979,20 +1033,36 @@ async function processAnalysis(analysisId, bvid, useWhisper, config) {
                     if (prog) {
                         prog.transcribeLive = update;
                     }
-                });
+                }, config);
                 transcriptData = parseWhisperResult(whisperResult);
                 source = 'whisper';
                 
                 analysisProgress.get(analysisId).steps.transcribe.status = 'completed';
                 analysisProgress.get(analysisId).steps.transcribe.endTime = Date.now();
             } catch (error) {
-                // 更新下载步骤为失败状态
-                progress.steps.download.status = 'error';
-                progress.steps.download.endTime = Date.now();
-                progress.steps.download.error = error.message;
+                // 判断是下载失败还是转录失败
+                const currentStep = analysisProgress.get(analysisId).currentStep;
+                
+                if (currentStep === 'transcribe' || error.message.includes('Whisper') || error.message.includes('转录')) {
+                    // 转录步骤失败
+                    progress.steps.transcribe.status = 'error';
+                    progress.steps.transcribe.endTime = Date.now();
+                    progress.steps.transcribe.error = error.message;
+                    // 确保下载步骤标记为完成（因为下载成功后才进入转录）
+                    if (progress.steps.download.status === 'running') {
+                        progress.steps.download.status = 'completed';
+                        progress.steps.download.endTime = Date.now();
+                    }
+                } else {
+                    // 下载步骤失败
+                    progress.steps.download.status = 'error';
+                    progress.steps.download.endTime = Date.now();
+                    progress.steps.download.error = error.message;
+                }
+                
                 progress.status = 'error';
                 progress.error = '下载/转录失败: ' + error.message;
-                console.error(`[分析任务 ${analysisId}] 下载失败:`, error);
+                console.error(`[分析任务 ${analysisId}] ${currentStep} 失败:`, error);
                 // 60秒后清理
                 setTimeout(() => analysisProgress.delete(analysisId), 60000);
                 return;
@@ -1424,20 +1494,28 @@ app.get('/api/check-ytdlp', async (req, res) => {
         const util = require('util');
         const execPromise = util.promisify(exec);
         
+        // 加载配置
+        const config = await loadConfig();
+        const systemPython = config.systemPython || 'python3';
+        
         // 检查 yt-dlp 版本
-        const { stdout } = await execPromise(`${SYSTEM_PYTHON} -m yt_dlp --version`);
+        const { stdout } = await execPromise(`${systemPython} -m yt_dlp --version`);
         
         res.json({ 
             status: 'ok', 
             version: stdout.trim(),
-            python: SYSTEM_PYTHON,
+            python: systemPython,
             dataDir: DATA_DIR
         });
     } catch (error) {
+        // 加载配置
+        const config = await loadConfig();
+        const systemPython = config.systemPython || 'python3';
+        
         res.status(500).json({ 
             status: 'error', 
             error: error.message,
-            python: SYSTEM_PYTHON
+            python: systemPython
         });
     }
 });
