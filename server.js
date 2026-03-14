@@ -18,7 +18,7 @@ const DATA_DIR = path.join(__dirname, 'data');
 // 确保数据目录存在
 async function ensureDataDir() {
     try {
-        await fs.mkdir(DATA_DIR, { recursive: true });
+        await fs.mkdir(DATA_DIR, { recursive: true }, config);
     } catch (e) {}
 }
 ensureDataDir();
@@ -156,7 +156,7 @@ async function getVideoSubtitle(avid, cid) {
 
         const subtitleUrl = subtitles[0].subtitle_url;
         const fullUrl = subtitleUrl.startsWith('http') ? subtitleUrl : 'https:' + subtitleUrl;
-        const contentResponse = await axios.get(fullUrl, { timeout: 10000 });
+        const contentResponse = await axios.get(fullUrl, { timeout: 10000 }, config);
         return contentResponse.data;
     } catch (error) {
         return null;
@@ -258,15 +258,15 @@ async function downloadAudio(bvid, title, progressCallback = null, biliCookie = 
                         size: progressMatch[2],
                         speed: progressMatch[3],
                         text: lastProgress
-                    });
+                    }, config);
                 }
-            });
+            }, config);
             
             process.stderr.on('data', (data) => {
                 const text = data.toString();
                 errorOutput += text;
                 console.log(`[下载 stderr] ${text.trim()}`);
-            });
+            }, config);
             
             process.on('close', async (code) => {
                 // 清理cookie文件
@@ -292,19 +292,19 @@ async function downloadAudio(bvid, title, progressCallback = null, biliCookie = 
                 } catch (e) {
                     reject(new Error('下载完成但文件不存在'));
                 }
-            });
+            }, config);
             
             process.on('error', (err) => {
                 console.error(`[下载] 启动失败: ${err.message}`);
                 reject(new Error('启动下载失败: ' + err.message));
-            });
+            }, config);
             
             // 5分钟超时
             setTimeout(() => {
                 process.kill();
                 reject(new Error('下载超时 (5分钟)'));
             }, 300000);
-        });
+        }, config);
     }
 }
 
@@ -376,10 +376,10 @@ async function transcribeAudio(audioPath, whisperModel = 'base', progressCallbac
                             time: lastTime,
                             text: lastText,
                             raw: line.trim()
-                        });
+                        }, config);
                     }
                 }
-            });
+            }, config);
             
             let errorOutput = '';  // 收集错误输出
             
@@ -452,19 +452,19 @@ async function transcribeAudio(audioPath, whisperModel = 'base', progressCallbac
                 } catch (e) {
                     reject(new Error('读取转录结果失败: ' + e.message));
                 }
-            });
+            }, config);
             
             process.on('error', (err) => {
                 console.error(`[转录] 启动失败: ${err.message}`);
                 reject(new Error('启动 Whisper 失败: ' + err.message));
-            });
+            }, config);
             
             // 10分钟超时
             setTimeout(() => {
                 process.kill();
                 reject(new Error('转录超时'));
             }, 600000);
-        });
+        }, config);
     }
 }
 
@@ -498,7 +498,7 @@ async function generateAIContent(transcript, videoInfo, config, progressCallback
     
     // 发送步骤开始信号，同时传递字数信息
     if (progressCallback) {
-        progressCallback('summary', 'running', { totalChars, titleLength, descLength, transcriptLength });
+        progressCallback('summary', 'running', { totalChars, titleLength, descLength, transcriptLength }, config);
         progressCallback('keypoints', 'running');
         progressCallback('chapters', 'running');
         progressCallback('mindmap', 'running');
@@ -679,13 +679,13 @@ function formatTime(seconds) {
 app.get('/api/config', async (req, res) => {
     const config = await loadConfig();
     res.json(config);
-});
+}, config);
 
 // 保存配置
 app.post('/api/config', async (req, res) => {
     await saveConfig(req.body);
-    res.json({ success: true });
-});
+    res.json({ success: true }, config);
+}, config);
 
 // 历史记录文件路径
 const HISTORY_FILE = path.join(DATA_DIR, 'history.json');
@@ -727,9 +727,9 @@ app.get('/api/history', async (req, res) => {
         const history = await loadHistoryFromFile();
         res.json(history);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: error.message }, config);
     }
-});
+}, config);
 
 // 保存历史记录
 app.post('/api/history', async (req, res) => {
@@ -753,11 +753,11 @@ app.post('/api/history', async (req, res) => {
         }
         
         await saveHistoryToFile(history);
-        res.json({ success: true });
+        res.json({ success: true }, config);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: error.message }, config);
     }
-});
+}, config);
 
 // 删除历史记录
 app.delete('/api/history/:bvid', async (req, res) => {
@@ -765,11 +765,11 @@ app.delete('/api/history/:bvid', async (req, res) => {
         let history = await loadHistoryFromFile();
         history = history.filter(h => h.videoInfo.bvid !== req.params.bvid);
         await saveHistoryToFile(history);
-        res.json({ success: true });
+        res.json({ success: true }, config);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: error.message }, config);
     }
-});
+}, config);
 
 // 获取分组
 app.get('/api/groups', async (req, res) => {
@@ -777,20 +777,20 @@ app.get('/api/groups', async (req, res) => {
         const groups = await loadGroupsFromFile();
         res.json(groups);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: error.message }, config);
     }
-});
+}, config);
 
 // 保存分组
 app.post('/api/groups', async (req, res) => {
     try {
         const groups = req.body;
         await saveGroupsToFile(groups);
-        res.json({ success: true });
+        res.json({ success: true }, config);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: error.message }, config);
     }
-});
+}, config);
 
 // 更新历史记录分组
 app.put('/api/history/:bvid/group', async (req, res) => {
@@ -804,11 +804,11 @@ app.put('/api/history/:bvid/group', async (req, res) => {
             await saveHistoryToFile(history);
         }
         
-        res.json({ success: true });
+        res.json({ success: true }, config);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: error.message }, config);
     }
-});
+}, config);
 
 // 检测本地Whisper模型
 app.get('/api/whisper-models', async (req, res) => {
@@ -841,7 +841,7 @@ app.get('/api/whisper-models', async (req, res) => {
                 available: false,
                 models: [],
                 message: '未找到 Whisper 模型目录，请先在服务器上运行 whisper 命令下载模型'
-            });
+            }, config);
         }
         
         // 读取模型目录
@@ -865,14 +865,14 @@ app.get('/api/whisper-models', async (req, res) => {
                 size: info.size,
                 desc: info.desc
             };
-        });
+        }, config);
         
         res.json({
             available: true,
             modelsDir: modelsDir,
             models: models,
             message: models.length > 0 ? `找到 ${models.length} 个模型` : '模型目录存在但没有找到模型文件'
-        });
+        }, config);
         
     } catch (error) {
         console.error('[检测模型] 错误:', error);
@@ -880,9 +880,9 @@ app.get('/api/whisper-models', async (req, res) => {
             available: false,
             models: [],
             message: '检测模型失败: ' + error.message
-        });
+        }, config);
     }
-});
+}, config);
 
 // 全局进度存储（用于轮询）
 const analysisProgress = new Map();
@@ -896,10 +896,10 @@ function generateId() {
 app.get('/api/analyze/progress/:id', (req, res) => {
     const progress = analysisProgress.get(req.params.id);
     if (!progress) {
-        return res.status(404).json({ error: '进度不存在' });
+        return res.status(404).json({ error: '进度不存在' }, config);
     }
     res.json(progress);
-});
+}, config);
 
 // 分析视频（异步处理，立即返回analysisId）
 app.post('/api/analyze', async (req, res) => {
@@ -910,12 +910,12 @@ app.post('/api/analyze', async (req, res) => {
         const config = await loadConfig();
 
         if (!config.apiKey) {
-            return res.status(400).json({ error: '请先配置AI API密钥' });
+            return res.status(400).json({ error: '请先配置AI API密钥' }, config);
         }
 
         const bvid = extractVideoId(videoId);
         if (!bvid) {
-            return res.status(400).json({ error: '无效的视频链接' });
+            return res.status(400).json({ error: '无效的视频链接' }, config);
         }
 
         // 初始化进度
@@ -933,10 +933,10 @@ app.post('/api/analyze', async (req, res) => {
             whisperModel: config.whisperModel || 'base',
             result: null,
             error: null
-        });
+        }, config);
 
         // 立即返回analysisId，后台异步处理
-        res.json({ analysisId, status: 'started' });
+        res.json({ analysisId, status: 'started' }, config);
 
         // 后台异步处理分析任务
         processAnalysis(analysisId, bvid, useWhisper, config).catch(error => {
@@ -946,36 +946,36 @@ app.post('/api/analyze', async (req, res) => {
                 progress.status = 'error';
                 progress.error = error.message;
             }
-        });
+        }, config);
 
     } catch (error) {
         analysisProgress.delete(analysisId);
         console.error('启动分析失败:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: error.message }, config);
     }
-});
+}, config);
 
 // 获取分析结果
 app.get('/api/analyze/result/:id', (req, res) => {
     const progress = analysisProgress.get(req.params.id);
     if (!progress) {
-        return res.status(404).json({ error: '分析任务不存在' });
+        return res.status(404).json({ error: '分析任务不存在' }, config);
     }
     
     if (progress.status === 'completed') {
-        res.json({ status: 'completed', result: progress.result });
+        res.json({ status: 'completed', result: progress.result }, config);
     } else if (progress.status === 'error') {
-        res.status(500).json({ status: 'error', error: progress.error });
+        res.status(500).json({ status: 'error', error: progress.error }, config);
     } else if (progress.status === 'no_subtitle') {
         res.status(404).json({ 
             status: 'no_subtitle', 
             videoInfo: progress.videoInfo,
             progress: progress
-        });
+        }, config);
     } else {
-        res.json({ status: 'running', progress: progress });
+        res.json({ status: 'running', progress: progress }, config);
     }
-});
+}, config);
 
 // 后台处理分析任务
 async function processAnalysis(analysisId, bvid, useWhisper, config) {
@@ -1018,7 +1018,7 @@ async function processAnalysis(analysisId, bvid, useWhisper, config) {
                     if (prog) {
                         prog.downloadProgress = update;
                     }
-                }, biliCookie, proxyUrl);
+                }, biliCookie, proxyUrl, config);
                 
                 // 更新进度：开始转录
                 analysisProgress.get(analysisId).currentStep = 'transcribe';
@@ -1033,7 +1033,7 @@ async function processAnalysis(analysisId, bvid, useWhisper, config) {
                     if (prog) {
                         prog.transcribeLive = update;
                     }
-                });
+                }, config);
                 transcriptData = parseWhisperResult(whisperResult);
                 source = 'whisper';
                 
@@ -1102,7 +1102,7 @@ async function processAnalysis(analysisId, bvid, useWhisper, config) {
                         prog.charInfo = charInfo;
                     }
                 }
-            });
+            }, config);
         } catch (aiError) {
             progress.status = 'error';
             progress.error = 'AI分析失败: ' + (aiError.response?.data?.error?.message || aiError.message);
@@ -1162,15 +1162,15 @@ app.post('/api/ask', async (req, res) => {
         const config = await loadConfig();
 
         if (!config.apiKey) {
-            return res.status(400).json({ error: '请先配置AI API密钥' });
+            return res.status(400).json({ error: '请先配置AI API密钥' }, config);
         }
 
         const answer = await answerQuestion(question, transcript, videoInfo);
         res.json({ answer });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: error.message }, config);
     }
-});
+}, config);
 
 // 重新生成摘要
 app.post('/api/regenerate', async (req, res) => {
@@ -1184,7 +1184,7 @@ app.post('/api/regenerate', async (req, res) => {
         }
         
         if (!config.apiKey) {
-            return res.status(400).json({ error: '请先配置AI API密钥' });
+            return res.status(400).json({ error: '请先配置AI API密钥' }, config);
         }
 
         // 重新生成AI内容
@@ -1195,19 +1195,19 @@ app.post('/api/regenerate', async (req, res) => {
             keyPoints: aiResult.keyPoints,
             chapters: aiResult.chapters,
             mindmap: aiResult.mindmap
-        });
+        }, config);
     } catch (error) {
         console.error('重新生成摘要失败:', error);
         res.status(500).json({ 
             error: error.response?.data?.error?.message || error.message || '重新生成失败' 
-        });
+        }, config);
     }
-});
+}, config);
 
 // 健康检查
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+    res.json({ status: 'ok', timestamp: new Date().toISOString() }, config);
+}, config);
 
 // 翻译内容
 app.post('/api/translate', async (req, res) => {
@@ -1216,7 +1216,7 @@ app.post('/api/translate', async (req, res) => {
         const config = await loadConfig();
         
         if (!config.apiKey) {
-            return res.status(400).json({ error: '请先配置AI API密钥' });
+            return res.status(400).json({ error: '请先配置AI API密钥' }, config);
         }
         
         const langNames = {
@@ -1249,7 +1249,7 @@ app.post('/api/translate', async (req, res) => {
                 translatedKeyPoints.push({
                     point: await translateText(kp.point, targetLangName, config),
                     detail: await translateText(kp.detail, targetLangName, config)
-                });
+                }, config);
             }
         }
         
@@ -1261,7 +1261,7 @@ app.post('/api/translate', async (req, res) => {
                 time: ch.time,
                 title: await translateText(ch.title, targetLangName, config),
                 summary: await translateText(ch.summary, targetLangName, config)
-            });
+            }, config);
         }
         
         console.log('[翻译] 翻译完成');
@@ -1272,13 +1272,13 @@ app.post('/api/translate', async (req, res) => {
             chapters: translatedChapters,
             targetLang: targetLang,
             targetLangName: targetLangName
-        });
+        }, config);
         
     } catch (error) {
         console.error('[翻译] 错误:', error);
-        res.status(500).json({ error: error.message || '翻译失败' });
+        res.status(500).json({ error: error.message || '翻译失败' }, config);
     }
-});
+}, config);
 
 // 翻译全部内容（分部分进行，避免超时）
 app.post('/api/translate-all', async (req, res) => {
@@ -1287,7 +1287,7 @@ app.post('/api/translate-all', async (req, res) => {
         const config = await loadConfig();
         
         if (!config.apiKey) {
-            return res.status(400).json({ error: '请先配置 AI API 密钥' });
+            return res.status(400).json({ error: '请先配置 AI API 密钥' }, config);
         }
         
         const langNames = {
@@ -1337,7 +1337,7 @@ app.post('/api/translate-all', async (req, res) => {
                     translatedKeyPoints.push({
                         point: translatedPoint,
                         detail: translatedDetail
-                    });
+                    }, config);
                 }
             } catch (e) {
                 console.error(`[翻译] 要点 ${i+1} 翻译失败，使用原文:`, e.message);
@@ -1358,7 +1358,7 @@ app.post('/api/translate-all', async (req, res) => {
                     time: ch.time,
                     title: translatedTitle,
                     summary: translatedSummary
-                });
+                }, config);
             } catch (e) {
                 console.error(`[翻译] 章节 ${i+1} 翻译失败，使用原文:`, e.message);
                 translatedChapters.push(ch);
@@ -1381,7 +1381,7 @@ app.post('/api/translate-all', async (req, res) => {
                     translatedBranches.push({
                         title: translatedTitle,
                         items: translatedItems
-                    });
+                    }, config);
                 }
                 translatedMindmap = {
                     root: translatedRoot,
@@ -1405,13 +1405,13 @@ app.post('/api/translate-all', async (req, res) => {
             originalChapters: originalChapters,
             targetLang: targetLang,
             targetLangName: targetLangName
-        });
+        }, config);
         
     } catch (error) {
         console.error('[翻译] 错误:', error);
-        res.status(500).json({ error: error.message || '翻译失败' });
+        res.status(500).json({ error: error.message || '翻译失败' }, config);
     }
-});
+}, config);
 
 // 带超时的翻译函数（带重试）
 async function translateTextWithTimeout(text, targetLang, config, timeoutMs = 120000, retries = 2) {
@@ -1467,7 +1467,7 @@ app.post('/api/regenerate-all', async (req, res) => {
         }
         
         if (!config.apiKey) {
-            return res.status(400).json({ error: '请先配置 AI API 密钥' });
+            return res.status(400).json({ error: '请先配置 AI API 密钥' }, config);
         }
         
         console.log('[重新生成] 开始重新分析内容...');
@@ -1483,9 +1483,9 @@ app.post('/api/regenerate-all', async (req, res) => {
         console.error('[重新生成] 错误:', error);
         res.status(500).json({ 
             error: error.response?.data?.error?.message || error.message || '重新生成失败' 
-        });
+        }, config);
     }
-});
+}, config);
 
 // 检查 yt-dlp 状态
 // 检查 yt-dlp 状态
@@ -1507,7 +1507,7 @@ app.get('/api/check-ytdlp', async (req, res) => {
             version: stdout.trim(),
             python: systemPython,
             dataDir: DATA_DIR
-        });
+        }, config);
     } catch (error) {
         // 加载配置
         const config = await loadConfig();
@@ -1519,7 +1519,7 @@ app.get('/api/check-ytdlp', async (req, res) => {
             python: systemPython
         });
     }
-});
+}, config);
 
 // 静态文件
 app.use('/', express.static(__dirname));
@@ -1532,7 +1532,7 @@ const server = app.listen(PORT, () => {
     console.log(`║  📱 访问地址: http://localhost:${actualPort}          ║`);
     console.log('║  ⚙️  请先配置AI API: /api/config               ║');
     console.log('╚════════════════════════════════════════════════╝');
-});
+}, config);
 
 // 翻译摘要（独立任务）
 
