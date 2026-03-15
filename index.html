@@ -231,8 +231,189 @@
         .error-message.active { display: block; }
         
         
-        @media (max-width: 1200px) { .sidebar { display: none; } .features-showcase { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 768px) { .features-showcase, .export-grid { grid-template-columns: 1fr; } }
+        /* Mobile Responsive Styles */
+        @media (max-width: 1200px) { 
+            .sidebar { display: none; } 
+            .features-showcase { grid-template-columns: repeat(2, 1fr); } 
+        }
+        
+        @media (max-width: 768px) { 
+            /* Navbar adjustments */
+            .navbar { 
+                padding: 0 16px; 
+                height: 56px; 
+            }
+            .logo { font-size: 18px; }
+            .logo-icon { width: 32px; height: 32px; font-size: 20px; }
+            .nav-btn { padding: 8px 14px; font-size: 13px; }
+            
+            /* Main container */
+            .main-container { padding-top: 56px; }
+            .content { padding: 16px; }
+            
+            /* Input page */
+            .input-page { margin: 20px auto; padding: 0 12px; }
+            .input-header h1 { font-size: 24px; }
+            .input-header p { font-size: 14px; }
+            .input-card { padding: 20px; }
+            .input-box { flex-direction: column; }
+            .url-input { padding: 14px 16px; font-size: 14px; }
+            .analyze-btn { padding: 14px 24px; width: 100%; }
+            .features-showcase, .export-grid { grid-template-columns: 1fr; }
+            .feature-item { padding: 16px; }
+            
+            /* Settings page */
+            .settings-page { margin: 16px auto; padding: 0 12px; }
+            .settings-card { padding: 24px 20px; }
+            .settings-title { font-size: 20px; }
+            
+            /* Result page */
+            .video-bar { 
+                flex-direction: column; 
+                align-items: flex-start; 
+                padding: 12px; 
+                gap: 12px;
+            }
+            .video-thumb { width: 100%; height: auto; aspect-ratio: 16/9; }
+            .video-title { font-size: 14px; }
+            .video-quick-actions { flex-wrap: wrap; }
+            
+            /* Tabs */
+            .tabs-nav { 
+                padding: 0 4px; 
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .tab-item { 
+                padding: 12px 14px; 
+                font-size: 13px;
+                white-space: nowrap;
+            }
+            .tab-content { padding: 16px; }
+            
+            /* Key points */
+            .point-item { padding: 12px; }
+            .point-num { width: 24px; height: 24px; font-size: 12px; }
+            .point-text { font-size: 14px; }
+            .point-detail { font-size: 12px; }
+            
+            /* Chapters */
+            .chapter-card { padding: 12px; gap: 12px; }
+            .chapter-time { font-size: 12px; min-width: 45px; }
+            .chapter-title { font-size: 14px; }
+            .chapter-summary { font-size: 12px; }
+            
+            /* Mindmap */
+            .mindmap-container { padding: 20px; }
+            .mindmap-branches { grid-template-columns: 1fr; gap: 16px; }
+            .mindmap-root { padding: 12px 24px; font-size: 14px; }
+            
+            /* Transcript */
+            .transcript-item { padding: 12px 0; gap: 12px; }
+            .transcript-time { font-size: 12px; min-width: 45px; }
+            .transcript-text { font-size: 13px; }
+            
+            /* Q&A */
+            .qa-container { height: 400px; }
+            .message-bubble { 
+                max-width: 90%; 
+                padding: 12px 14px; 
+                font-size: 14px;
+            }
+            .qa-input-area { padding-top: 12px; }
+            .qa-input { padding: 12px 14px; font-size: 14px; }
+            
+            /* Loading overlay */
+            .loading-text { font-size: 18px; }
+            .loading-timer { font-size: 24px; }
+            .loading-steps { padding: 0 16px; }
+            .loading-step { padding: 10px 12px; }
+            .step-title { font-size: 13px; }
+            .step-desc { font-size: 11px; }
+            
+            /* Summary section */
+            .summary-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+            .summary-title { font-size: 16px; }
+            .summary-content { font-size: 14px; }
+            
+            /* Option row */
+            .option-row { gap: 12px; }
+            .option-item { font-size: 13px; }
+            
+            /* Section translate button */
+            .section-translate-btn { 
+                float: none; 
+                display: inline-block; 
+                margin: 8px 0 0 0;
+                padding: 6px 10px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .input-header h1 { font-size: 20px; }
+            .video-meta { flex-direction: column; gap: 4px; }
+            .video-actions { width: 100%; justify-content: flex-end; }
+            .quick-action-btn { padding: 5px 10px; font-size: 11px; }
+            .btn-text { padding: 6px 12px; font-size: 12px; }
+            .export-card { padding: 16px; }
+        }
+        
+        /* Mobile sidebar styles */
+        .mobile-menu-btn { display: none; }
+        
+        @media (max-width: 1200px) {
+            .mobile-menu-btn { 
+                display: flex; 
+                align-items: center;
+                justify-content: center;
+                font-size: 18px;
+                padding: 8px 12px;
+            }
+            
+            .mobile-new-btn-container {
+                display: block !important;
+            }
+            
+            .sidebar { 
+                display: block;
+                position: fixed;
+                left: -280px;
+                top: 56px;
+                bottom: 0;
+                z-index: 99;
+                transition: left 0.3s ease;
+                box-shadow: 2px 0 8px rgba(0,0,0,0.3);
+            }
+            
+            .sidebar.mobile-open {
+                left: 0;
+            }
+            
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 56px;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 98;
+            }
+            
+            .sidebar-overlay.active {
+                display: block;
+            }
+        }
+        
+        /* Touch-friendly improvements */
+        @media (hover: none) and (pointer: coarse) {
+            .nav-btn, .new-btn, .analyze-btn, .btn-primary, .btn-text {
+                min-height: 44px;
+            }
+            .history-item { padding: 16px 20px; }
+            .tab-item { padding: 14px 16px; }
+            .icon-btn { width: 40px; height: 40px; }
+        }
     </style>
 </head>
 <body>
@@ -251,12 +432,14 @@
             <span>Omni-Notes</span>
         </div>
         <div class="nav-right">
+            <button class="nav-btn mobile-menu-btn" onclick="toggleMobileSidebar()" id="mobileMenuBtn">☰</button>
             <button class="nav-btn" onclick="showSettings()">⚙️ 设置</button>
         </div>
     </nav>
 
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMobileSidebar()"></div>
     <div class="main-container">
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <button class="new-btn" onclick="resetApp()">
                     <span>+</span>
@@ -355,6 +538,13 @@
 
             <!-- 输入页面 -->
             <div class="input-page" id="inputPage">
+                <!-- Mobile new analysis button -->
+                <div class="mobile-new-btn-container" style="display: none; margin-bottom: 16px;">
+                    <button class="new-btn" onclick="resetApp()" style="width: 100%;">
+                        <span>+</span>
+                        <span>新建分析</span>
+                    </button>
+                </div>
                 <div class="input-header">
                     <h1>Omni-Notes</h1>
                     <p>粘贴B站视频链接，AI自动转录、生成摘要、整理笔记</p>
@@ -487,6 +677,14 @@
         let groups = [];
         let currentResult = null;
         let currentConfig = null;
+        
+        // Mobile sidebar toggle
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('mobile-open');
+            overlay.classList.toggle('active');
+        }
         
         async function loadHistoryFromServer() {
             try {
