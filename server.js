@@ -149,25 +149,32 @@ async function getProxyFromAPI(apiUrl) {
     try {
         console.log(`[代理] 从API获取代理IP: ${apiUrl}`);
         const response = await axios.get(apiUrl, { timeout: 10000 });
-        
+
         // 处理不同格式的API返回
         let proxyData = response.data;
-        
-        // 如果是对象，尝试从data字段提取
+
+        // 如果返回的是对象，先处理常见的错误结构
         if (typeof proxyData === 'object' && proxyData !== null) {
-            if (proxyData.data) {
+            // 常见API格式：{ code: 0, data: "IP:PORT", msg: "ok" }
+            if (typeof proxyData.code !== 'undefined' && proxyData.code !== 0) {
+                const msg = proxyData.msg || proxyData.message || `code ${proxyData.code}`;
+                throw new Error(`代理API返回错误: ${msg}`);
+            }
+
+            if (typeof proxyData.data !== 'undefined' && proxyData.data !== null && proxyData.data !== '') {
                 proxyData = proxyData.data;
-            } else {
+            } else if (typeof proxyData === 'object') {
+                // 其他对象类型，序列化为字符串后再解析
                 proxyData = JSON.stringify(proxyData);
             }
         }
-        
+
         proxyData = proxyData.toString().trim();
-        
-        if (!proxyData || proxyData.length === 0) {
+
+        if (!proxyData) {
             throw new Error('代理API返回为空');
         }
-        
+
         // 解析代理格式，可能形如：
         // "1.2.3.4:8080" 
         // "1.2.3.4:8080|http"
@@ -177,14 +184,14 @@ async function getProxyFromAPI(apiUrl) {
         if (proxyData.includes(';')) {
             proxyStr = proxyData.split(';')[0]; // 取第一个代理
         }
-        
+
         proxyStr = proxyStr.split('|')[0]; // 移除协议标记部分
         proxyStr = proxyStr.trim();
-        
+
         if (!proxyStr) {
             throw new Error('无法解析代理信息');
         }
-        
+
         console.log(`[代理] 成功获取代理: ${proxyStr}`);
         return proxyStr; // 返回 IP:PORT 或 IP 格式
     } catch (error) {
