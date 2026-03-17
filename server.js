@@ -100,19 +100,30 @@ async function saveConfig(config) {
 // 创建隧道代理配置（用于 axios 请求）
 // axios 直接支持 proxy 参数，无需额外依赖
 function createTunnelAgent(proxyUrl) {
-    if (!proxyUrl) return null;
+    if (!proxyUrl) {
+        console.log('[隧道代理] 代理URL为空，不使用代理');
+        return null;
+    }
     
     try {
-        const proxyUrlObj = new URL(proxyUrl);
-        console.log(`[隧道代理] 使用代理: ${proxyUrlObj.hostname}:${proxyUrlObj.port || 80}`);
+        // 确保URL有协议前缀
+        let finalProxyUrl = proxyUrl;
+        if (!finalProxyUrl.startsWith('http://') && !finalProxyUrl.startsWith('https://')) {
+            finalProxyUrl = 'http://' + finalProxyUrl;
+        }
+        
+        const proxyUrlObj = new URL(finalProxyUrl);
+        const hostname = proxyUrlObj.hostname || 'unknown';
+        const port = proxyUrlObj.port || '80';
+        console.log(`[隧道代理] 使用代理: ${hostname}:${port}`);
         
         // 返回 axios 可以直接使用的代理配置
         return {
-            http: proxyUrl,
-            https: proxyUrl
+            http: finalProxyUrl,
+            https: finalProxyUrl
         };
     } catch (error) {
-        console.error(`[隧道代理] 创建代理配置失败: ${error.message}`);
+        console.error(`[隧道代理] 创建代理配置失败: ${error.message}, URL: ${proxyUrl}`);
         return null;
     }
 }
@@ -138,14 +149,44 @@ async function getProxyFromAPI(apiUrl) {
     try {
         console.log(`[代理] 从API获取代理IP: ${apiUrl}`);
         const response = await axios.get(apiUrl, { timeout: 10000 });
-        const proxyIp = response.data.toString().trim();
         
-        if (!proxyIp || proxyIp.length === 0) {
+        // 处理不同格式的API返回
+        let proxyData = response.data;
+        
+        // 如果是对象，尝试从data字段提取
+        if (typeof proxyData === 'object' && proxyData !== null) {
+            if (proxyData.data) {
+                proxyData = proxyData.data;
+            } else {
+                proxyData = JSON.stringify(proxyData);
+            }
+        }
+        
+        proxyData = proxyData.toString().trim();
+        
+        if (!proxyData || proxyData.length === 0) {
             throw new Error('代理API返回为空');
         }
         
-        console.log(`[代理] 成功获取代理IP: ${proxyIp}`);
-        return proxyIp;
+        // 解析代理格式，可能形如：
+        // "1.2.3.4:8080" 
+        // "1.2.3.4:8080|http"
+        // "1.2.3.4:8080|http;5.6.7.8:8081|http" (多个)
+        // 取第一个代理
+        let proxyStr = proxyData;
+        if (proxyData.includes(';')) {
+            proxyStr = proxyData.split(';')[0]; // 取第一个代理
+        }
+        
+        proxyStr = proxyStr.split('|')[0]; // 移除协议标记部分
+        proxyStr = proxyStr.trim();
+        
+        if (!proxyStr) {
+            throw new Error('无法解析代理信息');
+        }
+        
+        console.log(`[代理] 成功获取代理: ${proxyStr}`);
+        return proxyStr; // 返回 IP:PORT 或 IP 格式
     } catch (error) {
         console.error(`[代理] 获取代理IP失败: ${error.message}`);
         throw error;
@@ -159,8 +200,17 @@ function buildPrivateProxyUrl(proxyIp, username, password) {
         return null;
     }
     
-    // 格式: http://username:password@proxy_ip/
-    const proxyUrl = `http://${username}:${password}@${proxyIp}/`;
+    // proxyIp 可能是 "1.2.3.4" 或 "1.2.3.4:8080" 格式
+    // 构建标准的代理URL：http://username:password@host:port/ 或 http://username:password@host/
+    let proxyUrl;
+    if (proxyIp.includes(':')) {
+        // 已包含端口
+        proxyUrl = `http://${username}:${password}@${proxyIp}/`;
+    } else {
+        // 不包含端口，使用默认HTTP端口
+        proxyUrl = `http://${username}:${password}@${proxyIp}:80/`;
+    }
+    
     console.log(`[代理] 构建私密代理URL: http://***:***@${proxyIp}/`);
     return proxyUrl;
 }
