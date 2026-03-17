@@ -260,9 +260,9 @@ async function getVideoInfo(bvid, proxyConfig = null) {
 
     // 添加隧道代理配置（如果提供）
     if (proxyConfig) {
-        // 使用 http-proxy-agent 和 https-proxy-agent
-        const HttpsProxyAgent = require('https-proxy-agent');
-        const HttpProxyAgent = require('http-proxy-agent');
+        // http-proxy-agent/https-proxy-agent 从 v6 开始是 ESM-only，使用动态 import 兼容 CommonJS
+        const { default: HttpsProxyAgent } = await import('https-proxy-agent');
+        const { default: HttpProxyAgent } = await import('http-proxy-agent');
 
         const proxyUrl = `http://${proxyConfig.auth ? `${proxyConfig.auth.username}:${proxyConfig.auth.password}@` : ''}${proxyConfig.host}:${proxyConfig.port}`;
         axiosConfig.httpAgent = new HttpProxyAgent(proxyUrl);
@@ -308,9 +308,8 @@ async function getVideoSubtitle(avid, cid, proxyConfig = null) {
 
         // 添加隧道代理配置（如果提供）
         if (proxyConfig) {
-            // 使用 http-proxy-agent 和 https-proxy-agent
-            const HttpsProxyAgent = require('https-proxy-agent');
-            const HttpProxyAgent = require('http-proxy-agent');
+            const { default: HttpsProxyAgent } = await import('https-proxy-agent');
+            const { default: HttpProxyAgent } = await import('http-proxy-agent');
 
             const proxyUrl = `http://${proxyConfig.auth ? `${proxyConfig.auth.username}:${proxyConfig.auth.password}@` : ''}${proxyConfig.host}:${proxyConfig.port}`;
             axiosConfig.httpAgent = new HttpProxyAgent(proxyUrl);
