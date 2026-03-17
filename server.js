@@ -104,24 +104,34 @@ function createTunnelAgent(proxyUrl) {
         console.log('[隧道代理] 代理URL为空，不使用代理');
         return null;
     }
-    
+
     try {
         // 确保URL有协议前缀
         let finalProxyUrl = proxyUrl;
         if (!finalProxyUrl.startsWith('http://') && !finalProxyUrl.startsWith('https://')) {
             finalProxyUrl = 'http://' + finalProxyUrl;
         }
-        
+
         const proxyUrlObj = new URL(finalProxyUrl);
-        const hostname = proxyUrlObj.hostname || 'unknown';
-        const port = proxyUrlObj.port || '80';
+        const hostname = proxyUrlObj.hostname;
+        const port = Number(proxyUrlObj.port) || (proxyUrlObj.protocol === 'https:' ? 443 : 80);
         console.log(`[隧道代理] 使用代理: ${hostname}:${port}`);
-        
-        // 返回 axios 可以直接使用的代理配置
-        return {
-            http: finalProxyUrl,
-            https: finalProxyUrl
+
+        // 返回 axios 支持的 proxy 配置
+        // axios proxy 配置格式：{ host, port, auth? }
+        const proxyConfig = {
+            host: hostname,
+            port: port,
         };
+
+        if (proxyUrlObj.username || proxyUrlObj.password) {
+            proxyConfig.auth = {
+                username: decodeURIComponent(proxyUrlObj.username),
+                password: decodeURIComponent(proxyUrlObj.password)
+            };
+        }
+
+        return proxyConfig;
     } catch (error) {
         console.error(`[隧道代理] 创建代理配置失败: ${error.message}, URL: ${proxyUrl}`);
         return null;
@@ -247,16 +257,20 @@ async function getVideoInfo(bvid, proxyConfig = null) {
         },
         timeout: 10000 // 10秒超时
     };
-    
+
     // 添加隧道代理配置（如果提供）
     if (proxyConfig) {
-        axiosConfig.proxy = {
-            http: proxyConfig.http,
-            https: proxyConfig.https
-        };
+        // 使用 http-proxy-agent 和 https-proxy-agent
+        const HttpsProxyAgent = require('https-proxy-agent');
+        const HttpProxyAgent = require('http-proxy-agent');
+
+        const proxyUrl = `http://${proxyConfig.auth ? `${proxyConfig.auth.username}:${proxyConfig.auth.password}@` : ''}${proxyConfig.host}:${proxyConfig.port}`;
+        axiosConfig.httpAgent = new HttpProxyAgent(proxyUrl);
+        axiosConfig.httpsAgent = new HttpsProxyAgent(proxyUrl);
+
         console.log('[代理] 使用隧道代理获取视频信息');
     }
-    
+
     const response = await axios.get(
         `https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`,
         axiosConfig
@@ -291,15 +305,18 @@ async function getVideoSubtitle(avid, cid, proxyConfig = null) {
             },
             timeout: 10000 // 10秒超时
         };
-        
+
         // 添加隧道代理配置（如果提供）
         if (proxyConfig) {
-            axiosConfig.proxy = {
-                http: proxyConfig.http,
-                https: proxyConfig.https
-            };
+            // 使用 http-proxy-agent 和 https-proxy-agent
+            const HttpsProxyAgent = require('https-proxy-agent');
+            const HttpProxyAgent = require('http-proxy-agent');
+
+            const proxyUrl = `http://${proxyConfig.auth ? `${proxyConfig.auth.username}:${proxyConfig.auth.password}@` : ''}${proxyConfig.host}:${proxyConfig.port}`;
+            axiosConfig.httpAgent = new HttpProxyAgent(proxyUrl);
+            axiosConfig.httpsAgent = new HttpsProxyAgent(proxyUrl);
         }
-        
+
         const response = await axios.get(
             `https://api.bilibili.com/x/player/wbi/v2?cid=${cid}&aid=${avid}`,
             axiosConfig
