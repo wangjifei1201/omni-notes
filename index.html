@@ -518,18 +518,40 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">B站 Cookie (可选)</label>
-                        <textarea class="form-input" id="biliCookie" rows="3" placeholder="SESSDATA=xxx; bili_jct=xxx; DedeUserID=xxx"></textarea>
-                        <div class="form-hint">如果在云服务器上遇到412错误，请填写B站Cookie。在浏览器登录B站后，按F12打开开发者工具，在Console输入 document.cookie 获取</div>
-                    </div>
-
-                    <div class="form-group">
                         <label class="form-label" style="display: flex; align-items: center; gap: 8px;">
                             <input type="checkbox" id="proxyEnabled" style="width: auto;">
-                            <span>使用代理下载视频</span>
+                            <span>启用代理</span>
                         </label>
-                        <input type="text" class="form-input" id="proxyUrl" placeholder="http://127.0.0.1:7890" disabled>
-                        <div class="form-hint">如果下载视频失败，可配置代理服务器。格式：http://host:port 或 socks5://host:port</div>
+                        <select class="form-select" id="proxyType" style="margin-top: 8px;">
+                            <option value="direct">直接代理</option>
+                            <option value="private">私密代理</option>
+                        </select>
+                    </div>
+
+                    <!-- 直接代理配置 -->
+                    <div class="form-group" id="directProxyGroup">
+                        <label class="form-label">代理地址</label>
+                        <input type="text" class="form-input" id="proxyUrl" placeholder="http://127.0.0.1:7890">
+                        <div class="form-hint">本地代理服务器地址，格式：http://host:port</div>
+                    </div>
+
+                    <!-- 私密代理配置 -->
+                    <div class="form-group" id="privateProxyGroup" style="display: none;">
+                        <label class="form-label">代理API地址</label>
+                        <input type="text" class="form-input" id="proxyApiUrl" placeholder="https://dps.kdlapi.com/api/getdps/?secret_id=xxx&signature=xxx&num=1&sep=1">
+                        <div class="form-hint">从代理服务商获取的API地址，用于动态获取代理IP</div>
+                    </div>
+
+                    <div class="form-group" id="privateProxyAuthGroup" style="display: none;">
+                        <label class="form-label">代理用户名</label>
+                        <input type="text" class="form-input" id="proxyUsername" placeholder="用户名">
+                        <div class="form-hint">代理服务商提供的用户名</div>
+                    </div>
+
+                    <div class="form-group" id="privateProxyPassGroup" style="display: none;">
+                        <label class="form-label">代理密码</label>
+                        <input type="password" class="form-input" id="proxyPassword" placeholder="密码">
+                        <div class="form-hint">代理服务商提供的密码</div>
                     </div>
 
                     <button class="btn-primary" onclick="saveSettings()">💾 保存设置</button>
@@ -835,19 +857,23 @@
                 document.getElementById('baseURL').value = currentConfig.baseURL || 'https://coding.dashscope.aliyuncs.com/v1';
                 document.getElementById('model').value = currentConfig.model || 'qwen3.5-plus';
                 document.getElementById('useWhisper').checked = currentConfig.useWhisper || false;
-                document.getElementById('biliCookie').value = currentConfig.biliCookie || '';
                 
                 // 加载代理配置
                 if (currentConfig.proxy) {
                     document.getElementById('proxyEnabled').checked = currentConfig.proxy.enabled || false;
+                    document.getElementById('proxyType').value = currentConfig.proxy.type || 'direct';
                     document.getElementById('proxyUrl').value = currentConfig.proxy.url || '';
-                    document.getElementById('proxyUrl').disabled = !currentConfig.proxy.enabled;
+                    document.getElementById('proxyApiUrl').value = currentConfig.proxy.apiUrl || '';
+                    document.getElementById('proxyUsername').value = currentConfig.proxy.username || '';
+                    document.getElementById('proxyPassword').value = currentConfig.proxy.password || '';
                 }
                 
-                // 监听代理启用开关
-                document.getElementById('proxyEnabled').addEventListener('change', (e) => {
-                    document.getElementById('proxyUrl').disabled = !e.target.checked;
-                });
+                // 初始化代理UI状态
+                updateProxyUI();
+                
+                // 监听代理相关事件
+                document.getElementById('proxyEnabled').addEventListener('change', updateProxyUI);
+                document.getElementById('proxyType').addEventListener('change', updateProxyUI);
                 
                 // 检测Whisper模型
                 await detectWhisperModels();
@@ -942,7 +968,27 @@
             document.getElementById('whisperModelGroup').style.display = e.target.checked ? 'block' : 'none';
         });
 
+        // 代理UI更新函数
+        function updateProxyUI() {
+            const enabled = document.getElementById('proxyEnabled').checked;
+            const type = document.getElementById('proxyType').value;
+            
+            // 显示/隐藏代理类型选择
+            document.getElementById('proxyType').style.display = enabled ? 'block' : 'none';
+            
+            // 显示/隐藏直接代理配置
+            document.getElementById('directProxyGroup').style.display = (enabled && type === 'direct') ? 'block' : 'none';
+            
+            // 显示/隐藏私密代理配置
+            document.getElementById('privateProxyGroup').style.display = (enabled && type === 'private') ? 'block' : 'none';
+            document.getElementById('privateProxyAuthGroup').style.display = (enabled && type === 'private') ? 'block' : 'none';
+            document.getElementById('privateProxyPassGroup').style.display = (enabled && type === 'private') ? 'block' : 'none';
+        }
+
         async function saveSettings() {
+            const proxyEnabled = document.getElementById('proxyEnabled').checked;
+            const proxyType = document.getElementById('proxyType').value;
+            
             const config = {
                 aiProvider: document.getElementById('aiProvider').value,
                 apiKey: document.getElementById('apiKey').value,
@@ -950,10 +996,13 @@
                 model: document.getElementById('model').value,
                 useWhisper: document.getElementById('useWhisper').checked,
                 whisperModel: document.getElementById('whisperModel').value,
-                biliCookie: document.getElementById('biliCookie').value.trim(),
                 proxy: {
-                    enabled: document.getElementById('proxyEnabled').checked,
-                    url: document.getElementById('proxyUrl').value.trim()
+                    enabled: proxyEnabled,
+                    type: proxyType,
+                    url: proxyType === 'direct' ? document.getElementById('proxyUrl').value.trim() : '',
+                    apiUrl: proxyType === 'private' ? document.getElementById('proxyApiUrl').value.trim() : '',
+                    username: proxyType === 'private' ? document.getElementById('proxyUsername').value.trim() : '',
+                    password: proxyType === 'private' ? document.getElementById('proxyPassword').value.trim() : ''
                 }
             };
             try {

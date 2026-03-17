@@ -187,7 +187,14 @@ Omni-Notes/
      "model": "qwen3.5-plus",
      "useWhisper": true,
      "whisperModel": "base",
-     "biliCookie": ""
+     "proxy": {
+       "enabled": false,
+       "type": "direct",
+       "url": "http://127.0.0.1:7890",
+       "apiUrl": "",
+       "username": "",
+       "password": ""
+     }
    }
    ```
 
@@ -201,7 +208,60 @@ Omni-Notes/
 | `model` | 模型名称 | `qwen3.5-plus` |
 | `useWhisper` | 启用语音转文字 | `true` 或 `false` |
 | `whisperModel` | Whisper模型 | `tiny`/`base`/`small`/`medium` |
-| `biliCookie` | B站Cookie（可选） | `SESSDATA=xxx;...` |
+| `proxy.enabled` | 启用代理 | `true` 或 `false` |
+| `proxy.type` | 代理类型 | `direct` 或 `private` |
+| `proxy.url` | 代理地址（直接代理） | `http://127.0.0.1:7890` |
+| `proxy.apiUrl` | 代理API（私密代理） | `https://dps.kdlapi.com/api/getdps/?...` |
+| `proxy.username` | 代理用户名（私密代理） | `username` |
+| `proxy.password` | 代理密码（私密代理） | `password` |
+
+#### 代理配置说明
+
+**代理系统架构**
+
+系统支持**双层代理**：
+1. **下载代理**（yt-dlp）：用于视频音频下载
+2. **隧道代理**（axios）：用于 B站 API 请求（获取视频信息、字幕等）
+
+**直接代理模式**（适用于本地代理服务）
+```json
+{
+  "proxy": {
+    "enabled": true,
+    "type": "direct",
+    "url": "http://127.0.0.1:7890"
+  }
+}
+```
+
+此模式下：
+- ✅ 直接代理 URL 用于 yt-dlp 下载
+- ✅ 相同代理 URL 用于 axios API 请求（自动处理认证）
+- ✅ 无需额外配置
+
+**私密代理模式**（适用于付费代理服务，如快代理亚马逊云、讯代理等）
+```json
+{
+  "proxy": {
+    "enabled": true,
+    "type": "private",
+    "apiUrl": "https://dps.kdlapi.com/api/getdps/?secret_id=xxx&signature=xxx&num=1&sep=1",
+    "username": "d2072651992",
+    "password": "1ngjc7uy"
+  }
+}
+```
+
+**私密代理工作原理**：
+1. **下载代理**：从代理API获取动态代理IP，拼接认证信息 `http://user:pass@ip/`，传递给 yt-dlp 下载视频
+2. **隧道代理**：相同代理URL用于 axios 请求（获取视频信息、字幕等），自动处理 HTTP 认证
+3. 如果代理获取失败，系统自动降级为无代理模式，继续处理任务
+
+**双层代理的优势**：
+- 🔄 **一次配置，全局应用**：所有网络请求自动使用已配置的代理
+- 🛡️ **双重保护**：下载和 API 请求都通过代理，加强隐私保护
+- 🚀 **高效稳定**：代理失败时自动降级，不影响用户体验
+- 📊 **灵活扩展**：支持私密代理 API、直接代理 URL 等多种模式
 
 ## 🎯 模型文件
 
@@ -228,6 +288,9 @@ A: 端口已固定为5001，访问 http://localhost:5001
 
 ### Q: 配置后仍显示设置界面
 A: 刷新页面，已配置会自动进入主界面
+
+### Q: 如何配置私密代理？
+A: 参考上方"代理配置说明"的私密代理模式配置
 
 ### Q: 下载视频时提示412错误
 A: 在设置中配置B站Cookie：

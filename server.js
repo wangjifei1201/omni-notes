@@ -67,9 +67,19 @@ const DEFAULT_CONFIG = {
     model: 'qwen3.5-plus',
     useWhisper: false,
     whisperModel: 'base',
-    biliCookie: '',  // B站Cookie，用于下载视频时绕过412错误
     systemPython: 'python',  // 系统python（有yt-dlp）
     whisperCmd: 'whisper',  // Whisper命令路径
+    // 代理配置
+    proxy: {
+        enabled: false,  // 是否启用代理
+        type: 'direct',  // 'direct' 或 'private'
+        // 直接代理配置
+        url: '',  // 例如: http://127.0.0.1:7890
+        // 私密代理配置
+        apiUrl: '',  // 代理API地址
+        username: '',  // 代理用户名
+        password: ''   // 代理密码
+    }
 };
 
 // 加载配置
@@ -85,6 +95,74 @@ async function loadConfig() {
 // 保存配置
 async function saveConfig(config) {
     await fs.writeFile(CONFIG_FILE, JSON.stringify(config, null, 2));
+}
+
+// 创建隧道代理配置（用于 axios 请求）
+// axios 直接支持 proxy 参数，无需额外依赖
+function createTunnelAgent(proxyUrl) {
+    if (!proxyUrl) return null;
+    
+    try {
+        const proxyUrlObj = new URL(proxyUrl);
+        console.log(`[隧道代理] 使用代理: ${proxyUrlObj.hostname}:${proxyUrlObj.port || 80}`);
+        
+        // 返回 axios 可以直接使用的代理配置
+        return {
+            http: proxyUrl,
+            https: proxyUrl
+        };
+    } catch (error) {
+        console.error(`[隧道代理] 创建代理配置失败: ${error.message}`);
+        return null;
+    }
+}
+
+// 从私密代理配置构建代理URL（用于隧道代理）
+async function buildProxyUrlFromPrivateProxy(proxyConfig) {
+    if (!proxyConfig || !proxyConfig.apiUrl || !proxyConfig.username || !proxyConfig.password) {
+        console.warn('[隧道代理] 私密代理配置不完整');
+        return null;
+    }
+    
+    try {
+        const proxyIp = await getProxyFromAPI(proxyConfig.apiUrl);
+        return buildPrivateProxyUrl(proxyIp, proxyConfig.username, proxyConfig.password);
+    } catch (error) {
+        console.error(`[隧道代理] 构建私密代理URL失败: ${error.message}`);
+        return null;
+    }
+}
+
+// 从代理API获取代理IP
+async function getProxyFromAPI(apiUrl) {
+    try {
+        console.log(`[代理] 从API获取代理IP: ${apiUrl}`);
+        const response = await axios.get(apiUrl, { timeout: 10000 });
+        const proxyIp = response.data.toString().trim();
+        
+        if (!proxyIp || proxyIp.length === 0) {
+            throw new Error('代理API返回为空');
+        }
+        
+        console.log(`[代理] 成功获取代理IP: ${proxyIp}`);
+        return proxyIp;
+    } catch (error) {
+        console.error(`[代理] 获取代理IP失败: ${error.message}`);
+        throw error;
+    }
+}
+
+// 构建私密代理URL
+function buildPrivateProxyUrl(proxyIp, username, password) {
+    if (!proxyIp || !username || !password) {
+        console.error('[代理] 参数不完整: 需要proxyIp、username、password');
+        return null;
+    }
+    
+    // 格式: http://username:password@proxy_ip/
+    const proxyUrl = `http://${username}:${password}@${proxyIp}/`;
+    console.log(`[代理] 构建私密代理URL: http://***:***@${proxyIp}/`);
+    return proxyUrl;
 }
 
 // 提取BV/AV号
@@ -104,16 +182,27 @@ function extractVideoId(input) {
 }
 
 // 获取视频信息
-async function getVideoInfo(bvid) {
+async function getVideoInfo(bvid, proxyConfig = null) {
+    const axiosConfig = {
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Referer': 'https://www.bilibili.com'
+        },
+        timeout: 10000 // 10秒超时
+    };
+    
+    // 添加隧道代理配置（如果提供）
+    if (proxyConfig) {
+        axiosConfig.proxy = {
+            http: proxyConfig.http,
+            https: proxyConfig.https
+        };
+        console.log('[代理] 使用隧道代理获取视频信息');
+    }
+    
     const response = await axios.get(
         `https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`,
-        {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Referer': 'https://www.bilibili.com'
-            },
-            timeout: 10000 // 10秒超时
-        }
+        axiosConfig
     );
 
     if (response.data.code !== 0) {
@@ -136,17 +225,27 @@ async function getVideoInfo(bvid) {
 }
 
 // 获取视频字幕
-async function getVideoSubtitle(avid, cid) {
+async function getVideoSubtitle(avid, cid, proxyConfig = null) {
     try {
+        const axiosConfig = {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Referer': 'https://www.bilibili.com'
+            },
+            timeout: 10000 // 10秒超时
+        };
+        
+        // 添加隧道代理配置（如果提供）
+        if (proxyConfig) {
+            axiosConfig.proxy = {
+                http: proxyConfig.http,
+                https: proxyConfig.https
+            };
+        }
+        
         const response = await axios.get(
             `https://api.bilibili.com/x/player/wbi/v2?cid=${cid}&aid=${avid}`,
-            {
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                    'Referer': 'https://www.bilibili.com'
-                },
-                timeout: 10000 // 10秒超时
-            }
+            axiosConfig
         );
 
         if (response.data.code !== 0) return null;
@@ -156,7 +255,16 @@ async function getVideoSubtitle(avid, cid) {
 
         const subtitleUrl = subtitles[0].subtitle_url;
         const fullUrl = subtitleUrl.startsWith('http') ? subtitleUrl : 'https:' + subtitleUrl;
-        const contentResponse = await axios.get(fullUrl, { timeout: 10000 });
+        
+        const subtitleConfig = { timeout: 10000 };
+        if (proxyConfig) {
+            subtitleConfig.proxy = {
+                http: proxyConfig.http,
+                https: proxyConfig.https
+            };
+        }
+        
+        const contentResponse = await axios.get(fullUrl, subtitleConfig);
         return contentResponse.data;
     } catch (error) {
         return null;
@@ -177,7 +285,9 @@ function parseSubtitle(subtitleData) {
 }
 
 // 下载视频音频（使用yt-dlp）
-async function downloadAudio(bvid, title, progressCallback = null, biliCookie = null, proxyUrl = null, config = null) {
+// proxyConfig: { apiUrl, username, password, directUrl } - 代理配置
+// 优先使用私密代理（通过API获取IP + 用户名密码），其次使用直接代理URL
+async function downloadAudio(bvid, title, progressCallback = null, proxyUrl = null, config = null, proxyConfig = null) {
     const safeTitle = title.replace(/[^\w\s]/g, '').substring(0, 50) || 'video';
     const outputPath = path.join(DATA_DIR, `${bvid}_${safeTitle}.mp3`);
     
@@ -191,23 +301,20 @@ async function downloadAudio(bvid, title, progressCallback = null, biliCookie = 
         console.log(`[下载] 开始下载视频: ${bvid}`);
         const url = `https://www.bilibili.com/video/${bvid}`;
         
-        // 创建临时cookie文件
-        let cookieFile = null;
-        if (biliCookie) {
-            cookieFile = path.join(DATA_DIR, '.bili_cookies.txt');
-            // 转换cookie字符串为Netscape格式
-            const cookieLines = biliCookie.split(';').map(c => {
-                const [name, value] = c.trim().split('=');
-                if (name && value) {
-                    return `.bilibili.com\tTRUE\t/\tFALSE\t0\t${name.trim()}\t${value.trim()}`;
+        // 处理代理配置（在Promise之前）
+        let finalProxyUrl = proxyUrl;
+        if (proxyConfig) {
+            try {
+                if (proxyConfig.apiUrl && proxyConfig.username && proxyConfig.password) {
+                    // 使用私密代理（API获取IP + 用户名密码）
+                    const proxyIp = await getProxyFromAPI(proxyConfig.apiUrl);
+                    finalProxyUrl = buildPrivateProxyUrl(proxyIp, proxyConfig.username, proxyConfig.password);
+                } else if (proxyConfig.directUrl) {
+                    // 使用直接代理URL
+                    finalProxyUrl = proxyConfig.directUrl;
                 }
-                return null;
-            }).filter(Boolean);
-            
-            if (cookieLines.length > 0) {
-                const cookieContent = '# Netscape HTTP Cookie File\n# This file was generated by Omni-Notes\n\n' + cookieLines.join('\n');
-                await fs.writeFile(cookieFile, cookieContent);
-                console.log(`[下载] Cookie文件已创建: ${cookieFile}`);
+            } catch (error) {
+                console.error(`[下载] 获取代理失败: ${error.message}，将继续不使用代理`);
             }
         }
         
@@ -223,16 +330,10 @@ async function downloadAudio(bvid, title, progressCallback = null, biliCookie = 
                 '--progress',
             ];
             
-            // 如果提供了Cookie文件，使用--cookies参数
-            if (cookieFile) {
-                console.log('[下载] 使用Cookie文件');
-                args.push('--cookies', cookieFile);
-            }
-            
             // 如果配置了代理，添加代理参数
-            if (proxyUrl) {
-                console.log(`[下载] 使用代理: ${proxyUrl}`);
-                args.push('--proxy', proxyUrl);
+            if (finalProxyUrl) {
+                console.log(`[下载] 使用代理: http://***:***@<IP>/`);
+                args.push('--proxy', finalProxyUrl);
             }
             
             args.push(url);
@@ -269,16 +370,6 @@ async function downloadAudio(bvid, title, progressCallback = null, biliCookie = 
             });
             
             process.on('close', async (code) => {
-                // 清理cookie文件
-                if (cookieFile) {
-                    try {
-                        await fs.unlink(cookieFile);
-                        console.log('[下载] Cookie文件已清理');
-                    } catch (e) {
-                        // 忽略清理错误
-                    }
-                }
-                
                 if (code !== 0) {
                     console.error(`[下载] 进程退出码 ${code}, 错误: ${errorOutput}`);
                     reject(new Error(`下载失败 (退出码 ${code}): ${errorOutput.substring(0, 200)}`));
@@ -982,11 +1073,23 @@ async function processAnalysis(analysisId, bvid, useWhisper, config) {
     let progress = analysisProgress.get(analysisId);
     
     try {
+        // 创建隧道代理配置（如果配置了代理）
+        let tunnelProxyConfig = null;
+        if (config.proxy && config.proxy.enabled) {
+            const proxyUrl = config.proxy.type === 'private' && config.proxy.apiUrl && config.proxy.username && config.proxy.password
+                ? await buildProxyUrlFromPrivateProxy(config.proxy)
+                : config.proxy.url;
+            
+            if (proxyUrl) {
+                tunnelProxyConfig = createTunnelAgent(proxyUrl);
+            }
+        }
+        
         // 获取视频信息
-        const videoInfo = await getVideoInfo(bvid);
+        const videoInfo = await getVideoInfo(bvid, tunnelProxyConfig);
 
         // 尝试获取字幕
-        let subtitleData = await getVideoSubtitle(videoInfo.avid, videoInfo.cid);
+        let subtitleData = await getVideoSubtitle(videoInfo.avid, videoInfo.cid, tunnelProxyConfig);
         let transcriptData;
         let source = 'subtitle';
 
@@ -1010,15 +1113,35 @@ async function processAnalysis(analysisId, bvid, useWhisper, config) {
                 analysisProgress.get(analysisId).steps.download.status = 'running';
                 analysisProgress.get(analysisId).steps.download.startTime = Date.now();
                 
-                // 下载并实时更新进度
-                const biliCookie = config.biliCookie || process.env.BILI_COOKIE || null;
-                const proxyUrl = (config.proxy && config.proxy.enabled) ? config.proxy.url : null;
+                // 准备代理配置
+                let proxyUrl = null;
+                let proxyConfig = null;
+                
+                if (config.proxy && config.proxy.enabled) {
+                    if (config.proxy.type === 'private' && config.proxy.apiUrl && config.proxy.username && config.proxy.password) {
+                        // 使用私密代理
+                        console.log('[下载] 启用私密代理');
+                        proxyConfig = {
+                            apiUrl: config.proxy.apiUrl,
+                            username: config.proxy.username,
+                            password: config.proxy.password
+                        };
+                    } else if (config.proxy.url) {
+                        // 使用直接代理
+                        console.log('[下载] 启用直接代理');
+                        proxyUrl = config.proxy.url;
+                        proxyConfig = {
+                            directUrl: config.proxy.url
+                        };
+                    }
+                }
+                
                 const audioPath = await downloadAudio(bvid, videoInfo.title, (update) => {
                     const prog = analysisProgress.get(analysisId);
                     if (prog) {
                         prog.downloadProgress = update;
                     }
-                }, biliCookie, proxyUrl);
+                }, proxyUrl, config, proxyConfig);
                 
                 // 更新进度：开始转录
                 analysisProgress.get(analysisId).currentStep = 'transcribe';

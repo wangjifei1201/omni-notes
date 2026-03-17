@@ -5,10 +5,13 @@
   "model": "qwen3.5-plus",
   "useWhisper": true,
   "whisperModel": "base",
-  "biliCookie": "",
   "proxy": {
     "enabled": false,
-    "url": "http://127.0.0.1:7890"
+    "type": "direct",
+    "url": "http://127.0.0.1:7890",
+    "apiUrl": "",
+    "username": "",
+    "password": ""
   },
   "systemPython": "python",
   "whisperCmd": "whisper"
