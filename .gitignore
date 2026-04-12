@@ -1309,3 +1309,4 @@ postgres_data/pg_subtrans/0000
 postgres_data/pg_wal/000000010000000000000001
 postgres_data/pg_xact/0000
 .gstack/
+*.pyc

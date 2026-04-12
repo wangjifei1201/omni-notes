@@ -170,10 +170,6 @@ class DouyinService:
                 async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
                     response = await client.get(url, headers=headers)
                     response.raise_for_status()
-
-                    if '验证码' in response.text or 'captcha' in response.text.lower():
-                        continue
-
                     return response.text
 
             except httpx.HTTPStatusError as e:
