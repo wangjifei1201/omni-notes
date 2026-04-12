@@ -26,14 +26,22 @@ def validate_url(url: str) -> Tuple[bool, Optional[str]]:
     """
     Validate if URL is a supported video URL.
 
+    Automatically extracts the first URL from text that may contain
+    surrounding text (e.g. mobile share format: 【标题】 https://b23.tv/xxx).
+
     Args:
-        url: URL to validate
+        url: URL string or text containing a URL
 
     Returns:
         Tuple of (is_valid, platform)
         platform is None if URL is not supported
     """
-    if not url or not url.startswith(('http://', 'https://')):
+    if not url:
+        return False, None
+
+    # Extract URL from text if it doesn't start with http
+    url = extract_url(url)
+    if not url:
         return False, None
 
     # Check Bilibili patterns
@@ -47,6 +55,33 @@ def validate_url(url: str) -> Tuple[bool, Optional[str]]:
             return True, 'douyin'
 
     return False, None
+
+
+def extract_url(text: str) -> str:
+    """
+    Extract the first HTTP(S) URL from text.
+
+    Handles mobile share formats like:
+    - 【标题-哔哩哔哩】 https://b23.tv/xxx
+    - 标题 https://v.douyin.com/xxx 复制打开抖音
+
+    Args:
+        text: Input text that may contain a URL
+
+    Returns:
+        Extracted URL string, or the original text if it's already a URL
+    """
+    text = text.strip()
+    if text.startswith(('http://', 'https://')):
+        # Already a URL, just strip trailing whitespace/text
+        return text.split()[0]
+
+    # Find first URL in text
+    match = re.search(r'https?://[^\s\u3000<>"\'\]）)]+', text)
+    if match:
+        return match.group(0)
+
+    return text
 
 
 def validate_username(username: str) -> Tuple[bool, Optional[str]]:

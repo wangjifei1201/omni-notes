@@ -80,7 +80,107 @@ class WhisperService:
         return f"{minutes:02d}:{secs:02d}"
 
     # ------------------------------------------------------------------
-    # Download audio with real-time progress
+    # Direct download audio (for Douyin where yt-dlp is broken)
+    # ------------------------------------------------------------------
+
+    async def download_audio_direct(
+        self,
+        video_download_url: str,
+        task_id: str,
+        progress_callback: ProgressCallback = None,
+    ) -> Path:
+        """
+        Download video directly via HTTP and extract audio with ffmpeg.
+
+        Used for platforms where yt-dlp doesn't work (e.g., Douyin).
+
+        Args:
+            video_download_url: Direct video file URL
+            task_id: Task ID for temp file naming
+            progress_callback: Async callback for progress updates
+
+        Returns:
+            Path to downloaded mp3 audio file
+        """
+        output_path = self._get_audio_path(task_id)
+        video_path = self.temp_dir / f"{task_id}_video.mp4"
+
+        try:
+            # Step 1: Download video file with progress
+            headers = {
+                "User-Agent": (
+                    "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) "
+                    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 "
+                    "Mobile/15E148 Safari/604.1"
+                ),
+                "Referer": "https://www.iesdouyin.com/",
+            }
+
+            async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
+                async with client.stream("GET", video_download_url, headers=headers) as response:
+                    response.raise_for_status()
+                    total = int(response.headers.get("content-length", 0))
+                    downloaded = 0
+
+                    print(f"[下载] 直接下载视频: {total / 1024 / 1024:.1f}MB")
+
+                    with open(video_path, "wb") as f:
+                        async for chunk in response.aiter_bytes(chunk_size=65536):
+                            f.write(chunk)
+                            downloaded += len(chunk)
+                            if total > 0 and progress_callback:
+                                pct = int(downloaded * 100 / total)
+                                await progress_callback({
+                                    "percent": min(pct, 99),
+                                    "size": f"{total / 1024 / 1024:.1f}MiB",
+                                    "speed": "",
+                                    "text": f"下载中 {pct}%",
+                                })
+
+            if not video_path.exists() or video_path.stat().st_size == 0:
+                raise Exception("视频下载失败: 文件为空")
+
+            print(f"[下载] 视频下载完成: {video_path.stat().st_size / 1024 / 1024:.1f}MB")
+
+            # Step 2: Extract audio with ffmpeg
+            print("[下载] 使用 ffmpeg 提取音频...")
+            proc = await asyncio.create_subprocess_exec(
+                "ffmpeg", "-y",
+                "-i", str(video_path),
+                "-vn",                    # no video
+                "-acodec", "libmp3lame",
+                "-ab", "192k",
+                "-ar", "44100",
+                str(output_path),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            _, stderr = await proc.communicate()
+
+            if proc.returncode != 0:
+                err_msg = stderr.decode("utf-8", errors="replace")[-500:]
+                raise Exception(f"ffmpeg 音频提取失败: {err_msg}")
+
+            if not output_path.exists() or output_path.stat().st_size == 0:
+                raise Exception("ffmpeg 输出文件为空")
+
+            print(f"[下载] 音频提取完成: {output_path.stat().st_size / 1024 / 1024:.1f}MB")
+
+            if progress_callback:
+                await progress_callback({"percent": 100, "text": "下载完成"})
+
+            return output_path
+
+        finally:
+            # Clean up video file
+            if video_path.exists():
+                try:
+                    video_path.unlink()
+                except OSError:
+                    pass
+
+    # ------------------------------------------------------------------
+    # Download audio with real-time progress (via yt-dlp)
     # ------------------------------------------------------------------
 
     async def download_audio(
@@ -129,15 +229,15 @@ class WhisperService:
             "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         ]
 
-        # Add cookies (critical for Bilibili 412 workaround)
+        # Add cookies (critical for Bilibili 412 workaround and Douyin access)
         cookies_path: Optional[Path] = None
         if cookie:
             cookies_path = self._write_cookies_file(cookie, task_id)
             cmd.extend(["--cookies", str(cookies_path)])
-            print("[下载] 使用用户配置的 Bilibili cookie")
-        elif "bilibili.com" in video_url:
+            print("[下载] 使用用户配置的 cookie")
+        elif "bilibili.com" in video_url or "b23.tv" in video_url or "douyin.com" in video_url:
             cmd.extend(["--cookies-from-browser", "chrome"])
-            print("[下载] 未配置 cookie，尝试从浏览器读取")
+            print("[下载] 尝试从浏览器读取 cookie")
 
         # Add proxy if configured
         if proxy or settings.proxy_enabled:
@@ -266,7 +366,7 @@ class WhisperService:
             model = "base"
 
         python_exe = sys.executable or "python3"
-        script_path = Path(__file__).resolve().parent.parent.parent.parent / "whisper_stream.py"
+        script_path = Path(__file__).resolve().parent.parent.parent / "scripts" / "whisper_stream.py"
 
         if not script_path.exists():
             raise HTTPException(

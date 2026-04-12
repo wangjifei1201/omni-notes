@@ -13,7 +13,7 @@ from app.services.bilibili import BilibiliService
 from app.services.douyin import DouyinService
 from app.services.user_service import UserService
 from app.utils.crypto import decrypt_data
-from app.utils.validators import validate_url
+from app.utils.validators import validate_url, extract_url
 
 
 router = APIRouter(prefix="/api/v1/videos", tags=["videos"])
@@ -146,7 +146,7 @@ async def resolve_auto(
 
     **Authentication**: Required (registered user or guest)
     """
-    url = request.url
+    url = extract_url(request.url)
 
     # Validate URL format
     is_valid, platform = validate_url(url)

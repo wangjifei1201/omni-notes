@@ -21,6 +21,7 @@ from app.services.whisper_service import whisper_service
 from app.services.ai_service import ai_service
 from app.services.config_service import config_service
 from app.services.transcript_cache import transcript_cache
+from app.services.douyin import DouyinService
 from app.config import settings
 
 
@@ -160,6 +161,14 @@ class TaskRunner:
         task_id = task.id
         video_url = task.original_url
 
+        # Normalize URLs so yt-dlp can recognize the platform
+        if task.platform == "bilibili" and task.video_id and "bilibili.com/video/" not in video_url:
+            video_url = f"https://www.bilibili.com/video/{task.video_id}"
+            print(f"[下载] B站 URL 规范化: {task.original_url} -> {video_url}")
+        elif task.platform == "douyin" and task.video_id and "/video/" not in video_url:
+            video_url = f"https://www.douyin.com/video/{task.video_id}"
+            print(f"[下载] 抖音 URL 规范化: {task.original_url} -> {video_url}")
+
         # --- Download step ---
         await progress_service.update_step(task_id, "download", "running")
 
@@ -194,13 +203,25 @@ class TaskRunner:
             )
 
         try:
-            # Download audio with real-time progress streaming
-            audio_path = await whisper_service.download_audio(
-                video_url=video_url,
-                task_id=task_id,
-                cookie=bilibili_cookie,
-                progress_callback=on_download_progress,
-            )
+            # Download audio: Douyin uses direct download, others use yt-dlp
+            if task.platform == "douyin":
+                # yt-dlp Douyin extractor is broken, use direct download
+                download_url = await DouyinService.get_video_download_url(task.video_id)
+                if not download_url:
+                    raise Exception("无法获取抖音视频下载地址")
+                print(f"[下载] 抖音直接下载: {download_url[:80]}...")
+                audio_path = await whisper_service.download_audio_direct(
+                    video_download_url=download_url,
+                    task_id=task_id,
+                    progress_callback=on_download_progress,
+                )
+            else:
+                audio_path = await whisper_service.download_audio(
+                    video_url=video_url,
+                    task_id=task_id,
+                    cookie=bilibili_cookie,
+                    progress_callback=on_download_progress,
+                )
             await progress_service.update_step(task_id, "download", "completed")
 
             # --- Transcribe step ---

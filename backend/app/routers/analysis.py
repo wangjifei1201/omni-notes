@@ -20,7 +20,7 @@ from app.services.queue_service import queue_service
 from app.services.progress_service import progress_service
 from app.services.bilibili import BilibiliService
 from app.services.douyin import DouyinService
-from app.utils.validators import validate_url
+from app.utils.validators import validate_url, extract_url
 from app.utils.sse import sse_ping, sse_progress_full, sse_queue_status, sse_completed, sse_error
 from app.config import settings
 
@@ -50,8 +50,11 @@ async def create_analysis(
     **Authentication**: Required
     **Guest Limit**: Guest users are limited to 10 analyses
     """
+    # Extract URL from text (handles mobile share format: 【标题】 https://b23.tv/xxx)
+    url = extract_url(request.url)
+
     # Validate URL
-    is_valid, platform = validate_url(request.url)
+    is_valid, platform = validate_url(url)
     if not is_valid:
         raise HTTPException(
             status_code=400,
@@ -73,9 +76,9 @@ async def create_analysis(
     # Resolve video info first
     try:
         if platform == "bilibili":
-            video_info = await BilibiliService.resolve(request.url)
+            video_info = await BilibiliService.resolve(url)
         else:  # douyin
-            video_info = await DouyinService.resolve(request.url)
+            video_info = await DouyinService.resolve(url)
     except HTTPException:
         raise
     except Exception as e:
@@ -94,7 +97,7 @@ async def create_analysis(
         user_id=user.id,
         platform=platform,
         video_id=video_info.video_id,
-        original_url=request.url,
+        original_url=url,
         title=video_info.title,
         author=video_info.author,
         cover=video_info.cover,

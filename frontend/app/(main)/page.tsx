@@ -16,11 +16,21 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const { setCurrentVideo, setCurrentTask } = useAnalysisStore();
 
-  const detectPlatform = (url: string): 'bilibili' | 'douyin' | null => {
-    if (url.includes('bilibili.com') || url.includes('b23.tv')) {
+  // Extract URL from mobile share text like 【标题-哔哩哔哩】 https://b23.tv/xxx
+  const extractUrl = (text: string): string => {
+    const trimmed = text.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed.split(/\s/)[0];
+    }
+    const match = trimmed.match(/https?:\/\/[^\s\u3000<>"'\]）)]+/);
+    return match ? match[0] : trimmed;
+  };
+
+  const detectPlatform = (text: string): 'bilibili' | 'douyin' | null => {
+    if (text.includes('bilibili.com') || text.includes('b23.tv')) {
       return 'bilibili';
     }
-    if (url.includes('douyin.com') || url.includes('iesdouyin.com')) {
+    if (text.includes('douyin.com') || text.includes('iesdouyin.com') || text.includes('v.douyin.com')) {
       return 'douyin';
     }
     return null;
@@ -30,7 +40,8 @@ export default function HomePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!url.trim()) {
+    const inputUrl = extractUrl(url);
+    if (!inputUrl) {
       toast.error('请输入视频链接');
       return;
     }
@@ -43,8 +54,8 @@ export default function HomePage() {
     setIsLoading(true);
 
     try {
-      // Step 1: Parse video
-      const video = await videoApi.parse({ url: url.trim() });
+      // Step 1: Parse video (backend also does extract, but send clean URL)
+      const video = await videoApi.parse({ url: inputUrl });
       setCurrentVideo(video);
       toast.success('视频解析成功', {
         description: video.title,

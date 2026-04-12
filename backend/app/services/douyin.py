@@ -289,6 +289,42 @@ class DouyinService:
         return info if info else None
 
     @staticmethod
+    async def get_video_download_url(video_id: str) -> Optional[str]:
+        """
+        Get direct video download URL from iesdouyin.com _ROUTER_DATA.
+
+        Returns:
+            Direct video URL (play_addr) or None
+        """
+        try:
+            ies_url = DouyinService._build_iesdouyin_url(video_id)
+            html = await DouyinService._fetch_page(ies_url)
+            router_data = DouyinService._parse_router_data(html)
+            if not router_data:
+                return None
+
+            loader_data = router_data.get("loaderData", {})
+            page_data = loader_data.get("video_(id)/page")
+            if not page_data:
+                for key, value in loader_data.items():
+                    if key.startswith("video_") and key.endswith("/page"):
+                        page_data = value
+                        break
+            if not page_data:
+                return None
+
+            item_list = page_data.get("videoInfoRes", {}).get("item_list", [])
+            if not item_list:
+                return None
+
+            play_addr = item_list[0].get("video", {}).get("play_addr", {})
+            url_list = play_addr.get("url_list", [])
+            return url_list[0] if url_list else None
+        except Exception as e:
+            print(f"[抖音] 获取视频下载地址失败: {e}")
+            return None
+
+    @staticmethod
     async def resolve(url: str) -> VideoInfo:
         """
         Resolve Douyin URL to video information.
