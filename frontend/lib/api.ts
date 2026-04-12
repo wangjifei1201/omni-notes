@@ -3,28 +3,24 @@ import type {
   User,
   UserLogin,
   UserRegister,
-  UserUpdate,
   Video,
   VideoParseRequest,
   AnalysisResult,
   CreateAnalysisRequest,
-  AnalysisHistory,
-  HistoryCreateRequest,
-  HistoryUpdateRequest,
   HistoryFilterParams,
   HistoryListResponse,
   Group,
   GroupCreateRequest,
   GroupUpdateRequest,
-  GroupTree,
   UserConfig,
   ConfigUpdateRequest,
   AIModel,
-  TestAIRequest,
-  TestAIResponse,
+  ApiResponse,
 } from '@/types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// Use relative URL so requests go through Next.js proxy (same-origin),
+// avoiding cross-origin cookie issues. The proxy is configured in next.config.mjs.
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({
@@ -33,13 +29,12 @@ const apiClient: AxiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true, // Enable cookie sending
+  withCredentials: true,
 });
 
 // Request interceptor
 apiClient.interceptors.request.use(
   (config) => {
-    // CSRF token can be added here if needed
     return config;
   },
   (error) => {
@@ -58,7 +53,6 @@ apiClient.interceptors.response.use(
       const url = error.config?.url;
       // Don't redirect for auth check endpoint - AuthGuard handles it
       if (url !== '/api/v1/auth/me' && typeof window !== 'undefined') {
-        // Only redirect if not already on login page
         if (!window.location.pathname.includes('/login')) {
           window.location.href = '/login';
         }
@@ -70,7 +64,6 @@ apiClient.interceptors.response.use(
 
 // Helper function to handle API responses
 function handleResponse<T>(response: { data: T }): T {
-  // Backend returns data directly, not wrapped in {success, data}
   return response.data;
 }
 
@@ -92,11 +85,6 @@ export const authApi = {
 
   getCurrentUser: async (): Promise<User> => {
     const response = await apiClient.get<User>('/api/v1/auth/me');
-    return handleResponse(response);
-  },
-
-  updateProfile: async (data: UserUpdate): Promise<User> => {
-    const response = await apiClient.put<User>('/api/v1/auth/profile', data);
     return handleResponse(response);
   },
 
@@ -122,18 +110,6 @@ export const videoApi = {
     );
     return handleResponse(response);
   },
-
-  getById: async (id: number): Promise<Video> => {
-    const response = await apiClient.get<Video>(`/api/v1/videos/${id}`);
-    return handleResponse(response);
-  },
-
-  getSubtitles: async (id: number): Promise<Video> => {
-    const response = await apiClient.get<Video>(
-      `/api/v1/videos/${id}/subtitles`
-    );
-    return handleResponse(response);
-  },
 };
 
 // Analysis API
@@ -146,28 +122,21 @@ export const analysisApi = {
     return handleResponse(response).task_id;
   },
 
-  getProgress: async (taskId: string): Promise<Response> => {
-    return apiClient.get(`/api/v1/analysis/${taskId}/progress`, {
-      responseType: 'stream',
-    });
+  getProgress: async (taskId: string): Promise<{
+    step: string;
+    step_status: 'pending' | 'running' | 'completed' | 'error';
+    percent: number;
+    message: string;
+  }> => {
+    const response = await apiClient.get(`/api/v1/analysis/${taskId}/status`);
+    return handleResponse(response);
   },
 
-  getById: async (id: number): Promise<AnalysisResult> => {
+  getById: async (taskId: string): Promise<AnalysisResult> => {
     const response = await apiClient.get<AnalysisResult>(
-      `/api/v1/analysis/${id}`
+      `/api/v1/analysis/${taskId}`
     );
     return handleResponse(response);
-  },
-
-  getByVideoId: async (videoId: number): Promise<AnalysisResult[]> => {
-    const response = await apiClient.get<AnalysisResult[]>(
-      `/api/v1/analysis/video/${videoId}`
-    );
-    return handleResponse(response);
-  },
-
-  cancel: async (taskId: string): Promise<void> => {
-    await apiClient.post(`/api/v1/analysis/${taskId}/cancel`);
   },
 
   getModels: async (): Promise<AIModel[]> => {
@@ -178,21 +147,6 @@ export const analysisApi = {
 
 // History API
 export const historyApi = {
-  create: async (data: HistoryCreateRequest): Promise<AnalysisHistory> => {
-    const response = await apiClient.post<AnalysisHistory>(
-      '/api/v1/history',
-      data
-    );
-    return handleResponse(response);
-  },
-
-  getById: async (id: number): Promise<AnalysisHistory> => {
-    const response = await apiClient.get<AnalysisHistory>(
-      `/api/v1/history/${id}`
-    );
-    return handleResponse(response);
-  },
-
   getList: async (params?: HistoryFilterParams): Promise<HistoryListResponse> => {
     const response = await apiClient.get<HistoryListResponse>('/api/v1/history', {
       params,
@@ -200,20 +154,15 @@ export const historyApi = {
     return handleResponse(response);
   },
 
-  update: async (id: number, data: HistoryUpdateRequest): Promise<AnalysisHistory> => {
-    const response = await apiClient.put<AnalysisHistory>(
-      `/api/v1/history/${id}`,
-      data
-    );
+  delete: async (taskId: string): Promise<void> => {
+    await apiClient.delete(`/api/v1/history/${taskId}`);
+  },
+
+  search: async (keyword: string, page?: number, limit?: number): Promise<HistoryListResponse> => {
+    const response = await apiClient.get<HistoryListResponse>('/api/v1/history/search', {
+      params: { keyword, page, limit },
+    });
     return handleResponse(response);
-  },
-
-  delete: async (id: number): Promise<void> => {
-    await apiClient.delete(`/api/v1/history/${id}`);
-  },
-
-  batchDelete: async (ids: number[]): Promise<void> => {
-    await apiClient.post('/api/v1/history/batch-delete', { ids });
   },
 };
 
@@ -224,32 +173,31 @@ export const groupApi = {
     return handleResponse(response);
   },
 
-  getById: async (id: number): Promise<Group> => {
-    const response = await apiClient.get<Group>(`/api/v1/groups/${id}`);
-    return handleResponse(response);
-  },
-
   getList: async (): Promise<Group[]> => {
     const response = await apiClient.get<Group[]>('/api/v1/groups');
     return handleResponse(response);
   },
 
-  getTree: async (): Promise<GroupTree[]> => {
-    const response = await apiClient.get<GroupTree[]>('/api/v1/groups/tree');
+  getByTask: async (taskId: string): Promise<Group[]> => {
+    const response = await apiClient.get<Group[]>(`/api/v1/groups/by-task/${taskId}`);
     return handleResponse(response);
   },
 
-  update: async (id: number, data: GroupUpdateRequest): Promise<Group> => {
+  update: async (id: string, data: GroupUpdateRequest): Promise<Group> => {
     const response = await apiClient.put<Group>(`/api/v1/groups/${id}`, data);
     return handleResponse(response);
   },
 
-  delete: async (id: number): Promise<void> => {
+  delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/api/v1/groups/${id}`);
   },
 
-  moveHistory: async (groupId: number, historyIds: number[]): Promise<void> => {
-    await apiClient.post(`/api/v1/groups/${groupId}/move`, { history_ids: historyIds });
+  addTask: async (groupId: string, taskId: string): Promise<void> => {
+    await apiClient.post(`/api/v1/groups/${groupId}/tasks/${taskId}`);
+  },
+
+  removeTask: async (groupId: string, taskId: string): Promise<void> => {
+    await apiClient.delete(`/api/v1/groups/${groupId}/tasks/${taskId}`);
   },
 };
 
@@ -262,14 +210,6 @@ export const configApi = {
 
   update: async (data: ConfigUpdateRequest): Promise<UserConfig> => {
     const response = await apiClient.put<UserConfig>('/api/v1/config', data);
-    return handleResponse(response);
-  },
-
-  testAI: async (data: TestAIRequest): Promise<TestAIResponse> => {
-    const response = await apiClient.post<TestAIResponse>(
-      '/api/v1/config/test-ai',
-      data
-    );
     return handleResponse(response);
   },
 };
