@@ -116,7 +116,7 @@ class WhisperService:
                 "Referer": "https://www.iesdouyin.com/",
             }
 
-            client_kwargs = {"timeout": 120.0, "follow_redirects": True}
+            client_kwargs = {"timeout": 600.0, "follow_redirects": True}
             if proxy_url:
                 client_kwargs["proxy"] = proxy_url
                 print(f"[下载] 使用代理直接下载视频")
@@ -303,13 +303,13 @@ class WhisperService:
                 await stderr_task
                 await proc.wait()
 
-            # 5-minute timeout
+            # 10-minute timeout
             try:
-                await asyncio.wait_for(_stream_and_wait(), timeout=300)
+                await asyncio.wait_for(_stream_and_wait(), timeout=600)
             except asyncio.TimeoutError:
                 proc.kill()
                 await proc.wait()
-                raise HTTPException(status_code=408, detail="下载音频超时 (5分钟)")
+                raise HTTPException(status_code=408, detail="下载音频超时 (10分钟)")
 
             stderr_text = "".join(stderr_chunks)
             if stderr_text:

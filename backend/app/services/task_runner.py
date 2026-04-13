@@ -165,13 +165,16 @@ class TaskRunner:
         task_id = task.id
         video_url = task.original_url
 
-        # Normalize URLs so yt-dlp can recognize the platform
-        if task.platform == "bilibili" and task.video_id and "bilibili.com/video/" not in video_url:
+        # Normalize URLs: always use clean format for yt-dlp
+        # Strips unnecessary query params (spm_id_from, vd_source, etc.)
+        if task.platform == "bilibili" and task.video_id:
             video_url = f"https://www.bilibili.com/video/{task.video_id}"
-            print(f"[下载] B站 URL 规范化: {task.original_url} -> {video_url}")
-        elif task.platform == "douyin" and task.video_id and "/video/" not in video_url:
+            if video_url != task.original_url:
+                print(f"[下载] B站 URL 规范化: {task.original_url} -> {video_url}")
+        elif task.platform == "douyin" and task.video_id:
             video_url = f"https://www.douyin.com/video/{task.video_id}"
-            print(f"[下载] 抖音 URL 规范化: {task.original_url} -> {video_url}")
+            if video_url != task.original_url:
+                print(f"[下载] 抖音 URL 规范化: {task.original_url} -> {video_url}")
 
         # --- Resolve proxy (private API / direct / none) ---
         proxy_url = None
