@@ -234,15 +234,21 @@ class WhisperService:
             "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         ]
 
-        # Add cookies (critical for Bilibili 412 workaround and Douyin access)
+        # Add cookies (critical for Bilibili 412 workaround)
         cookies_path: Optional[Path] = None
         if cookie:
             cookies_path = self._write_cookies_file(cookie, task_id)
             cmd.extend(["--cookies", str(cookies_path)])
             print("[下载] 使用用户配置的 cookie")
         elif "bilibili.com" in video_url or "b23.tv" in video_url or "douyin.com" in video_url:
-            cmd.extend(["--cookies-from-browser", "chrome"])
-            print("[下载] 尝试从浏览器读取 cookie")
+            # Only try browser cookies if Chrome profile exists (local dev only)
+            chrome_path = Path.home() / ".config" / "google-chrome"
+            mac_chrome = Path.home() / "Library" / "Application Support" / "Google" / "Chrome"
+            if chrome_path.exists() or mac_chrome.exists():
+                cmd.extend(["--cookies-from-browser", "chrome"])
+                print("[下载] 尝试从浏览器读取 cookie")
+            else:
+                print("[下载] 未配置 cookie 且无本地浏览器，将直接下载")
 
         # Add proxy if configured (proxy_url already resolved by caller)
         if proxy:
