@@ -48,7 +48,9 @@ class Settings(BaseSettings):
 
     # Proxy Configuration
     proxy_enabled: bool = False
+    proxy_type: str = "direct"  # "direct" or "private"
     proxy_url: Optional[str] = None
+    proxy_api_url: Optional[str] = None  # Private proxy API endpoint
     proxy_username: Optional[str] = None
     proxy_password: Optional[str] = None
 

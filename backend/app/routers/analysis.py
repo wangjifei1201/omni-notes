@@ -21,6 +21,7 @@ from app.services.progress_service import progress_service
 from app.services.bilibili import BilibiliService
 from app.services.douyin import DouyinService
 from app.utils.validators import validate_url, extract_url
+from app.utils.proxy import resolve_proxy_url
 from app.utils.sse import sse_ping, sse_progress_full, sse_queue_status, sse_completed, sse_error
 from app.config import settings
 
@@ -73,12 +74,19 @@ async def create_analysis(
             }
         )
 
+    # Resolve proxy for tunnel (video info API requests)
+    proxy_url = None
+    try:
+        proxy_url = await resolve_proxy_url()
+    except Exception:
+        pass
+
     # Resolve video info first
     try:
         if platform == "bilibili":
-            video_info = await BilibiliService.resolve(url)
+            video_info = await BilibiliService.resolve(url, proxy_url=proxy_url)
         else:  # douyin
-            video_info = await DouyinService.resolve(url)
+            video_info = await DouyinService.resolve(url, proxy_url=proxy_url)
     except HTTPException:
         raise
     except Exception as e:

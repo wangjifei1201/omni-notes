@@ -84,13 +84,14 @@ class BilibiliService:
         return 'b23.tv' in url or 'bilibili.com' in url and len(url) < 50
 
     @staticmethod
-    async def resolve_short_url(short_url: str, cookie: Optional[str] = None) -> str:
+    async def resolve_short_url(short_url: str, cookie: Optional[str] = None, proxy_url: Optional[str] = None) -> str:
         """
         Resolve Bilibili short URL to full URL.
 
         Args:
             short_url: Short URL (e.g., https://b23.tv/xxxxx)
             cookie: Optional Bilibili cookie
+            proxy_url: Optional proxy URL for the request
 
         Returns:
             Full video URL
@@ -102,8 +103,12 @@ class BilibiliService:
         if cookie:
             headers["Cookie"] = cookie
 
+        client_kwargs: Dict[str, Any] = {"follow_redirects": True, "timeout": 10.0}
+        if proxy_url:
+            client_kwargs["proxy"] = proxy_url
+
         try:
-            async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
+            async with httpx.AsyncClient(**client_kwargs) as client:
                 response = await client.head(short_url, headers=headers)
 
                 # Get final URL after redirects
@@ -128,7 +133,8 @@ class BilibiliService:
     @staticmethod
     async def get_video_info(
         video_id: str,
-        cookie: Optional[str] = None
+        cookie: Optional[str] = None,
+        proxy_url: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Get video information from Bilibili API.
@@ -136,6 +142,7 @@ class BilibiliService:
         Args:
             video_id: BV or AV ID
             cookie: Optional Bilibili cookie for restricted videos
+            proxy_url: Optional proxy URL for the request
 
         Returns:
             Video information dictionary
@@ -156,8 +163,13 @@ class BilibiliService:
         else:
             raise HTTPException(status_code=400, detail=f"无效的视频ID格式: {video_id}")
 
+        client_kwargs: Dict[str, Any] = {"timeout": 15.0}
+        if proxy_url:
+            client_kwargs["proxy"] = proxy_url
+            print(f"[B站] 使用隧道代理获取视频信息")
+
         try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
+            async with httpx.AsyncClient(**client_kwargs) as client:
                 response = await client.get(
                     BilibiliService.API_VIDEO_INFO,
                     params=params,
@@ -206,7 +218,8 @@ class BilibiliService:
     @staticmethod
     async def resolve(
         url: str,
-        cookie: Optional[str] = None
+        cookie: Optional[str] = None,
+        proxy_url: Optional[str] = None,
     ) -> VideoInfo:
         """
         Resolve Bilibili URL to video information.
@@ -216,6 +229,7 @@ class BilibiliService:
         Args:
             url: Bilibili video URL (short or full)
             cookie: Optional Bilibili cookie
+            proxy_url: Optional proxy URL for API requests (tunnel proxy)
 
         Returns:
             VideoInfo object
@@ -227,7 +241,7 @@ class BilibiliService:
 
         # Step 1: Resolve short URL if needed
         if BilibiliService.is_short_url(url):
-            url = await BilibiliService.resolve_short_url(url, cookie)
+            url = await BilibiliService.resolve_short_url(url, cookie, proxy_url)
 
         # Step 2: Extract video ID
         video_id = BilibiliService.extract_video_id(url)
@@ -235,7 +249,7 @@ class BilibiliService:
             raise HTTPException(status_code=400, detail="无法从URL中提取视频ID")
 
         # Step 3: Get video info from API
-        info = await BilibiliService.get_video_info(video_id, cookie)
+        info = await BilibiliService.get_video_info(video_id, cookie, proxy_url)
 
         # Step 4: Format response
         owner = info.get('owner', {})

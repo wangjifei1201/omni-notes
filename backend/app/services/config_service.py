@@ -33,9 +33,9 @@ class ConfigService:
             use_whisper=settings.use_whisper,
             whisper_model=settings.whisper_model,
             proxy_enabled=settings.proxy_enabled,
-            proxy_type="direct" if not settings.proxy_enabled else "private",
+            proxy_type=settings.proxy_type if settings.proxy_enabled else "direct",
             proxy_url=settings.proxy_url,
-            proxy_api_url=None  # Not stored separately
+            proxy_api_url=getattr(settings, "proxy_api_url", None),
         )
 
     @staticmethod
@@ -72,7 +72,11 @@ class ConfigService:
         proxy = config_data.get('proxy')
         if proxy:
             settings.proxy_enabled = proxy.get('enabled', False)
-            settings.proxy_url = proxy.get('url')
+            settings.proxy_type = proxy.get('type', 'direct')
+            settings.proxy_url = proxy.get('url') or settings.proxy_url
+            settings.proxy_api_url = proxy.get('apiUrl') or settings.proxy_api_url
+            settings.proxy_username = proxy.get('username') or settings.proxy_username
+            settings.proxy_password = proxy.get('password') or settings.proxy_password
 
         # Handle API key (encrypt and store)
         api_key = config_data.get('api_key')

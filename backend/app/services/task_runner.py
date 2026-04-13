@@ -22,7 +22,7 @@ from app.services.ai_service import ai_service
 from app.services.config_service import config_service
 from app.services.transcript_cache import transcript_cache
 from app.services.douyin import DouyinService
-from app.config import settings
+from app.utils.proxy import resolve_proxy_url
 
 
 class TaskRunner:
@@ -154,6 +154,10 @@ class TaskRunner:
         Download audio and transcribe with Whisper.
         Wires real-time progress callbacks to progress_service.
 
+        Mirrors server.js processAnalysis proxy logic:
+        1. Resolve proxy URL (private API -> build auth URL, or direct URL)
+        2. Pass proxy to download service (yt-dlp --proxy or httpx proxy)
+
         Args:
             db: Database session
             task: Analysis task
@@ -168,6 +172,13 @@ class TaskRunner:
         elif task.platform == "douyin" and task.video_id and "/video/" not in video_url:
             video_url = f"https://www.douyin.com/video/{task.video_id}"
             print(f"[下载] 抖音 URL 规范化: {task.original_url} -> {video_url}")
+
+        # --- Resolve proxy (private API / direct / none) ---
+        proxy_url = None
+        try:
+            proxy_url = await resolve_proxy_url()
+        except Exception as e:
+            print(f"[下载] 代理解析失败，将直连下载: {e}")
 
         # --- Download step ---
         await progress_service.update_step(task_id, "download", "running")
@@ -206,19 +217,23 @@ class TaskRunner:
             # Download audio: Douyin uses direct download, others use yt-dlp
             if task.platform == "douyin":
                 # yt-dlp Douyin extractor is broken, use direct download
-                download_url = await DouyinService.get_video_download_url(task.video_id)
+                download_url = await DouyinService.get_video_download_url(
+                    task.video_id, proxy_url
+                )
                 if not download_url:
                     raise Exception("无法获取抖音视频下载地址")
                 print(f"[下载] 抖音直接下载: {download_url[:80]}...")
                 audio_path = await whisper_service.download_audio_direct(
                     video_download_url=download_url,
                     task_id=task_id,
+                    proxy_url=proxy_url,
                     progress_callback=on_download_progress,
                 )
             else:
                 audio_path = await whisper_service.download_audio(
                     video_url=video_url,
                     task_id=task_id,
+                    proxy=proxy_url,
                     cookie=bilibili_cookie,
                     progress_callback=on_download_progress,
                 )

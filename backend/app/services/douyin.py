@@ -76,12 +76,13 @@ class DouyinService:
         return 'v.douyin.com' in url.lower()
 
     @staticmethod
-    async def resolve_short_url(short_url: str) -> str:
+    async def resolve_short_url(short_url: str, proxy_url: Optional[str] = None) -> str:
         """
         Resolve Douyin short URL to full URL.
 
         Args:
             short_url: Short URL (e.g., https://v.douyin.com/xxxxx)
+            proxy_url: Optional proxy URL
 
         Returns:
             Full video URL
@@ -89,8 +90,12 @@ class DouyinService:
         Raises:
             HTTPException: If URL cannot be resolved
         """
+        client_kwargs: Dict[str, Any] = {"follow_redirects": True, "timeout": 10.0}
+        if proxy_url:
+            client_kwargs["proxy"] = proxy_url
+
         try:
-            async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
+            async with httpx.AsyncClient(**client_kwargs) as client:
                 # Try HEAD first
                 try:
                     response = await client.head(
@@ -153,9 +158,13 @@ class DouyinService:
         return f"https://www.iesdouyin.com/share/video/{video_id}/"
 
     @staticmethod
-    async def _fetch_page(url: str) -> str:
+    async def _fetch_page(url: str, proxy_url: Optional[str] = None) -> str:
         """
         Fetch a page with retry using different header sets.
+
+        Args:
+            url: Page URL
+            proxy_url: Optional proxy URL
 
         Returns:
             HTML content
@@ -167,7 +176,10 @@ class DouyinService:
 
         for headers in headers_list:
             try:
-                async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+                client_kwargs: Dict[str, Any] = {"timeout": 15.0, "follow_redirects": True}
+                if proxy_url:
+                    client_kwargs["proxy"] = proxy_url
+                async with httpx.AsyncClient(**client_kwargs) as client:
                     response = await client.get(url, headers=headers)
                     response.raise_for_status()
                     return response.text
@@ -289,16 +301,20 @@ class DouyinService:
         return info if info else None
 
     @staticmethod
-    async def get_video_download_url(video_id: str) -> Optional[str]:
+    async def get_video_download_url(video_id: str, proxy_url: Optional[str] = None) -> Optional[str]:
         """
         Get direct video download URL from iesdouyin.com _ROUTER_DATA.
+
+        Args:
+            video_id: Douyin video ID
+            proxy_url: Optional proxy URL
 
         Returns:
             Direct video URL (play_addr) or None
         """
         try:
             ies_url = DouyinService._build_iesdouyin_url(video_id)
-            html = await DouyinService._fetch_page(ies_url)
+            html = await DouyinService._fetch_page(ies_url, proxy_url)
             router_data = DouyinService._parse_router_data(html)
             if not router_data:
                 return None
@@ -325,7 +341,7 @@ class DouyinService:
             return None
 
     @staticmethod
-    async def resolve(url: str) -> VideoInfo:
+    async def resolve(url: str, proxy_url: Optional[str] = None) -> VideoInfo:
         """
         Resolve Douyin URL to video information.
 
@@ -339,7 +355,7 @@ class DouyinService:
 
         # Step 1: Resolve short URL if needed
         if DouyinService.is_short_url(url):
-            url = await DouyinService.resolve_short_url(url)
+            url = await DouyinService.resolve_short_url(url, proxy_url)
 
         # Step 2: Extract video ID
         video_id = DouyinService.extract_video_id(url)
@@ -352,7 +368,7 @@ class DouyinService:
         ies_url = DouyinService._build_iesdouyin_url(video_id)
         print(f"[抖音] 请求: {ies_url}")
 
-        html = await DouyinService._fetch_page(ies_url)
+        html = await DouyinService._fetch_page(ies_url, proxy_url)
 
         # Step 4: Parse _ROUTER_DATA (primary method)
         video_info = None

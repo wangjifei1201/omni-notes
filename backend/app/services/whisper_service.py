@@ -17,8 +17,6 @@ from typing import Optional, List, Dict, Any, Callable
 import httpx
 from fastapi import HTTPException
 
-from app.config import settings
-
 # Progress callback type: async function that receives a dict
 ProgressCallback = Optional[Callable[[Dict[str, Any]], Any]]
 
@@ -87,6 +85,7 @@ class WhisperService:
         self,
         video_download_url: str,
         task_id: str,
+        proxy_url: Optional[str] = None,
         progress_callback: ProgressCallback = None,
     ) -> Path:
         """
@@ -97,6 +96,7 @@ class WhisperService:
         Args:
             video_download_url: Direct video file URL
             task_id: Task ID for temp file naming
+            proxy_url: Optional proxy URL for the download
             progress_callback: Async callback for progress updates
 
         Returns:
@@ -116,7 +116,12 @@ class WhisperService:
                 "Referer": "https://www.iesdouyin.com/",
             }
 
-            async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
+            client_kwargs = {"timeout": 120.0, "follow_redirects": True}
+            if proxy_url:
+                client_kwargs["proxy"] = proxy_url
+                print(f"[下载] 使用代理直接下载视频")
+
+            async with httpx.AsyncClient(**client_kwargs) as client:
                 async with client.stream("GET", video_download_url, headers=headers) as response:
                     response.raise_for_status()
                     total = int(response.headers.get("content-length", 0))
@@ -239,11 +244,10 @@ class WhisperService:
             cmd.extend(["--cookies-from-browser", "chrome"])
             print("[下载] 尝试从浏览器读取 cookie")
 
-        # Add proxy if configured
-        if proxy or settings.proxy_enabled:
-            proxy_url = proxy or settings.proxy_url
-            if proxy_url:
-                cmd.extend(["--proxy", proxy_url])
+        # Add proxy if configured (proxy_url already resolved by caller)
+        if proxy:
+            cmd.extend(["--proxy", proxy])
+            print(f"[下载] 使用代理下载")
 
         cmd.append(video_url)
         print(f"[下载] 执行命令: {' '.join(cmd[:6])}... {video_url}")

@@ -14,6 +14,7 @@ from app.services.douyin import DouyinService
 from app.services.user_service import UserService
 from app.utils.crypto import decrypt_data
 from app.utils.validators import validate_url, extract_url
+from app.utils.proxy import resolve_proxy_url
 
 
 router = APIRouter(prefix="/api/v1/videos", tags=["videos"])
@@ -60,9 +61,16 @@ async def resolve_bilibili(
         except Exception:
             pass  # Ignore decryption errors
 
+    # Resolve proxy for tunnel (API requests)
+    proxy_url = None
+    try:
+        proxy_url = await resolve_proxy_url()
+    except Exception:
+        pass
+
     # Resolve URL
     try:
-        video_info = await BilibiliService.resolve(url, cookie)
+        video_info = await BilibiliService.resolve(url, cookie, proxy_url)
     except HTTPException:
         raise
     except Exception as e:
@@ -98,9 +106,16 @@ async def resolve_douyin(
             detail="无效的抖音视频链接，请检查链接格式"
         )
 
+    # Resolve proxy for tunnel (API requests)
+    proxy_url = None
+    try:
+        proxy_url = await resolve_proxy_url()
+    except Exception:
+        pass
+
     # Resolve URL
     try:
-        video_info = await DouyinService.resolve(url)
+        video_info = await DouyinService.resolve(url, proxy_url)
     except HTTPException as e:
         # Provide more specific error messages for common issues
         if e.status_code == 403:
