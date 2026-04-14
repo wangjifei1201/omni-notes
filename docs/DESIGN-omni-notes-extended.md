@@ -1,7 +1,7 @@
 # Omni-Notes 扩展设计文档
 
 ## 项目信息
-- **项目**: Omni-Notes (bilibili-summarizer)
+- **项目**: Omni-Notes
 - **设计日期**: 2026-03-29
 - **文档状态**: DRAFT
 
