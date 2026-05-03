@@ -227,6 +227,7 @@ class HistoryItem(BaseModel):
     created_at: datetime
     group_ids: List[str] = []
     summary: Optional[str] = None  # AI分析摘要
+    key_points: List[Dict[str, Any]] = []  # AI提取的关键要点
 
 
 class HistoryListResponse(BaseModel):

@@ -108,13 +108,16 @@ class HistoryService:
         )
         group_ids = [row[0] for row in result.fetchall()]
 
-        # Extract summary from result if available
+        # Extract summary and key_points from result if available
         summary = None
+        key_points = []
         if task.result:
             if isinstance(task.result, dict):
                 summary = task.result.get("summary")
+                key_points = task.result.get("key_points", [])
             else:
                 summary = getattr(task.result, "summary", None)
+                key_points = getattr(task.result, "key_points", [])
 
         return HistoryItem(
             id=task.id,
@@ -126,7 +129,8 @@ class HistoryService:
             status=task.status,
             created_at=task.created_at,
             group_ids=group_ids,
-            summary=summary
+            summary=summary,
+            key_points=key_points
         )
 
     @staticmethod
