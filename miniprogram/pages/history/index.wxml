@@ -55,7 +55,7 @@
           <view class="keypoints-content" wx:if="{{item.key_points && item.key_points.length > 0}}">
             <view class="keypoint-item" wx:for="{{item.key_points}}" wx:for-item="point" wx:key="index" wx:if="{{index < 3}}">
               <text class="keypoint-number">{{index + 1}}</text>
-              <text class="keypoint-text">{{point.title || point.content || ''}}</text>
+              <text class="keypoint-text">{{point.point}}</text>
             </view>
           </view>
           <view class="status-badge {{item.status}}">

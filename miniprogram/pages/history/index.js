@@ -80,6 +80,13 @@ Page({
           key_points: item.key_points,
           key_points_length: item.key_points ? item.key_points.length : 0,
         });
+
+        // 截断关键要点，保持在50字以内
+        const processedKeyPoints = (item.key_points || []).map(kp => ({
+          ...kp,
+          point: (kp.point || '').substring(0, 50)
+        }));
+
         const processed = {
           ...item,
           x: 0, // 初始化X坐标为0（未滑动）
@@ -88,13 +95,10 @@ Page({
           title: item.title || item.video_title || '视频分析',
           video_url: item.video_url || item.original_url || '',
           summary: item.summary || '', // 确保summary字段存在
-          key_points: item.key_points || [], // 确保key_points字段存在
+          key_points: processedKeyPoints, // 处理过的key_points
           analysis_type: item.analysis_type || '综合分析',
         };
-        console.log(`[loadHistory] 处理后的第 ${index} 条记录:`, {
-          key_points: processed.key_points,
-          key_points_length: processed.key_points.length,
-        });
+        console.log(`[loadHistory] 处理后的第 ${index} 条记录key_points:`, processed.key_points);
         return processed;
       });
 
