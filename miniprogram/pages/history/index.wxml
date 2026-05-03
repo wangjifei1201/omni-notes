@@ -37,15 +37,9 @@
         bindtap="onItemClick"
         bindlongpress="onItemLongPress"
       >
-        <!-- 第一行：标题 + 状态 + 收藏 -->
+        <!-- 第一行：标题 + 收藏 -->
         <view class="card-title-row">
-          <view class="title-content">
-            <text class="card-title">{{item.title || '未命名视频'}}</text>
-            <view class="status-badge {{item.status}}">
-              <text class="status-icon">{{item.status === 'completed' ? '✓' : item.status === 'failed' ? '✕' : '⟳'}}</text>
-              <text class="status-text">{{item.status === 'completed' ? '已完成' : item.status === 'failed' ? '失败' : '进行中'}}</text>
-            </view>
-          </view>
+          <text class="card-title">{{item.title || '未命名视频'}}</text>
           <button
             class="favorite-btn {{item.is_favorite ? 'active' : ''}}"
             data-history-id="{{item.id}}"
@@ -56,26 +50,30 @@
           </button>
         </view>
 
-        <!-- 第二行：视频元信息（作者 · 时长 · 平台 · 时间） -->
+        <!-- 第二行：分析摘要 + 状态标签 -->
+        <view class="card-summary-row">
+          <view class="summary-content" wx:if="{{item.summary}}">
+            <text class="summary-text">{{item.summary}}</text>
+          </view>
+          <view class="status-badge {{item.status}}">
+            <text class="status-icon">{{item.status === 'completed' ? '✓' : item.status === 'failed' ? '✕' : '⟳'}}</text>
+            <text class="status-text">{{item.status === 'completed' ? '已完成' : item.status === 'failed' ? '失败' : '进行中'}}</text>
+          </view>
+        </view>
+
+        <!-- 第三行：视频元信息（作者 · 出处 · 时间） + 更多按钮 -->
         <view class="card-meta-row">
-          <text class="meta-text">{{item.author || '未知作者'}}</text>
-          <text class="meta-sep">·</text>
-          <text class="meta-text">{{item.duration ? item.duration + 's' : '未知'}}</text>
-          <text class="meta-sep">·</text>
-          <text class="meta-platform {{item.platform}}">{{item.platform === 'bilibili' ? 'B站' : '抖音'}}</text>
-          <text class="meta-sep">·</text>
-          <text class="meta-time">{{item.created_at}}</text>
+          <view class="meta-content">
+            <text class="meta-text">{{item.author || '未知作者'}}</text>
+            <text class="meta-sep">·</text>
+            <text class="meta-platform {{item.platform}}">{{item.platform === 'bilibili' ? 'B站' : '抖音'}}</text>
+            <text class="meta-sep">·</text>
+            <text class="meta-time">{{item.created_at}}</text>
+          </view>
+          <button class="card-more-btn" data-id="{{item.id}}" catchtap="onShowActions">
+            <text class="more-icon">···</text>
+          </button>
         </view>
-
-        <!-- 第三行：分析摘要（1-2行，省略号截断） -->
-        <view class="card-summary" wx:if="{{item.summary}}">
-          <text class="summary-text">{{item.summary}}</text>
-        </view>
-
-        <!-- 操作菜单按钮 -->
-        <button class="card-more-btn" data-id="{{item.id}}" catchtap="onShowActions">
-          <text class="more-icon">···</text>
-        </button>
       </view>
     </view>
 

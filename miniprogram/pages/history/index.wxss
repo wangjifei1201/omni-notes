@@ -106,8 +106,8 @@
 .history-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px 16px;
+  gap: 10px;
+  padding: 14px 16px;
   background: #ffffff;
   border-radius: 12px;
   position: relative;
@@ -118,31 +118,72 @@
   background: #fafafa;
 }
 
-/* 第一行：标题 + 状态 + 收藏 */
+/* 第一行：标题 + 收藏 */
 .card-title-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
-}
-
-.title-content {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
 }
 
 .card-title {
   font-size: 16px;
   font-weight: 600;
   color: #1a1a2e;
-  line-height: 1.3;
+  line-height: 1.4;
   flex: 1;
   display: -webkit-box;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* 收藏按钮 */
+.favorite-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+  margin-top: -2px;
+}
+
+.favorite-icon {
+  font-size: 16px;
+  color: #bbb;
+  transition: color 0.2s ease;
+}
+
+.favorite-btn.active .favorite-icon {
+  color: #f59e0b;
+}
+
+/* 第二行：分析摘要 + 状态 */
+.card-summary-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 28px;
+}
+
+.summary-content {
+  flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.4;
+}
+
+.summary-text {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.4;
 }
 
 /* 状态标签样式 */
@@ -197,39 +238,22 @@
   font-size: 11px;
 }
 
-/* 收藏按钮 */
-.favorite-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: transparent;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  flex-shrink: 0;
-  margin: -4px;
-}
-
-.favorite-icon {
-  font-size: 16px;
-  color: #bbb;
-  transition: color 0.2s ease;
-}
-
-.favorite-btn.active .favorite-icon {
-  color: #f59e0b;
-}
-
-/* 第二行：视频元信息 */
+/* 第三行：视频元信息 + 更多 */
 .card-meta-row {
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: space-between;
+  gap: 8px;
   font-size: 12px;
   color: #999;
-  line-height: 1.2;
+}
+
+.meta-content {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
   display: -webkit-box;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
@@ -247,51 +271,34 @@
   color: #ddd;
   margin: 0 2px;
   display: inline;
+  flex-shrink: 0;
 }
 
 .meta-platform {
   font-size: 12px;
   color: #999;
   display: inline;
+  font-weight: 500;
+  flex-shrink: 0;
 }
 
 .meta-platform.bilibili {
   color: #00A1D6;
-  font-weight: 500;
 }
 
 .meta-platform.douyin {
   color: #FE2C55;
-  font-weight: 500;
 }
 
 .meta-time {
   font-size: 12px;
   color: #999;
   display: inline;
-}
-
-/* 第三行：分析摘要 */
-.card-summary {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  line-height: 1.4;
-  margin: 2px 0;
-}
-
-.summary-text {
-  font-size: 13px;
-  color: #666;
-  line-height: 1.4;
+  flex-shrink: 0;
 }
 
 /* 更多操作按钮 */
 .card-more-btn {
-  position: absolute;
-  top: 12px;
-  right: 12px;
   width: 28px;
   height: 28px;
   border-radius: 50%;
@@ -302,6 +309,7 @@
   justify-content: center;
   padding: 0;
   margin: 0;
+  flex-shrink: 0;
 }
 
 .more-icon {
