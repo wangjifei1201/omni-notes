@@ -1,6 +1,7 @@
 """
 User service for user management operations.
 """
+
 import random
 import string
 from datetime import datetime
@@ -19,10 +20,7 @@ class UserService:
     """Service for user-related operations."""
 
     @staticmethod
-    async def create_user(
-        db: AsyncSession,
-        user_data: UserCreate
-    ) -> User:
+    async def create_user(db: AsyncSession, user_data: UserCreate) -> User:
         """
         Create a new registered user.
 
@@ -46,7 +44,7 @@ class UserService:
             is_guest=False,
             usage_count=0,
             created_at=datetime.utcnow(),
-            last_login_at=datetime.utcnow()
+            last_login_at=datetime.utcnow(),
         )
 
         db.add(user)
@@ -56,10 +54,46 @@ class UserService:
         return user
 
     @staticmethod
-    async def get_user_by_username(
-        db: AsyncSession,
-        username: str
-    ) -> Optional[User]:
+    async def create_user_by_phone(
+        db: AsyncSession, phone: str, openid: str, username: str
+    ) -> User:
+        """
+        Create a new user by phone number (WeChat login).
+
+        Args:
+            db: Database session
+            phone: Phone number
+            openid: WeChat openid
+            username: Username
+
+        Returns:
+            Created User instance
+        """
+        # Generate a random password for WeChat users
+        random_password = "".join(
+            random.choices(string.ascii_letters + string.digits, k=32)
+        )
+
+        user = User(
+            id=generate_uuid(),
+            username=username,
+            password_hash=hash_password(random_password),
+            phone=phone,
+            openid=openid,
+            is_guest=False,
+            usage_count=0,
+            created_at=datetime.utcnow(),
+            last_login_at=datetime.utcnow(),
+        )
+
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+
+        return user
+
+    @staticmethod
+    async def get_user_by_username(db: AsyncSession, username: str) -> Optional[User]:
         """
         Get user by username.
 
@@ -70,16 +104,11 @@ class UserService:
         Returns:
             User instance or None
         """
-        result = await db.execute(
-            select(User).where(User.username == username)
-        )
+        result = await db.execute(select(User).where(User.username == username))
         return result.scalar_one_or_none()
 
     @staticmethod
-    async def get_user_by_id(
-        db: AsyncSession,
-        user_id: str
-    ) -> Optional[User]:
+    async def get_user_by_id(db: AsyncSession, user_id: str) -> Optional[User]:
         """
         Get user by ID.
 
@@ -90,9 +119,7 @@ class UserService:
         Returns:
             User instance or None
         """
-        result = await db.execute(
-            select(User).where(User.id == user_id)
-        )
+        result = await db.execute(select(User).where(User.id == user_id))
         return result.scalar_one_or_none()
 
     @staticmethod
@@ -107,12 +134,16 @@ class UserService:
             Created guest User instance
         """
         # Generate random guest username
-        random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+        random_suffix = "".join(
+            random.choices(string.ascii_lowercase + string.digits, k=8)
+        )
         username = f"guest_{random_suffix}"
 
         # Ensure username is unique
         while await UserService.get_user_by_username(db, username):
-            random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+            random_suffix = "".join(
+                random.choices(string.ascii_lowercase + string.digits, k=8)
+            )
             username = f"guest_{random_suffix}"
 
         # Create guest user with random password (won't be used for login)
@@ -123,7 +154,7 @@ class UserService:
             is_guest=True,
             usage_count=0,
             created_at=datetime.utcnow(),
-            last_login_at=datetime.utcnow()
+            last_login_at=datetime.utcnow(),
         )
 
         db.add(user)
@@ -178,9 +209,7 @@ class UserService:
 
     @staticmethod
     async def migrate_guest_data(
-        db: AsyncSession,
-        guest_user_id: str,
-        new_user_id: str
+        db: AsyncSession, guest_user_id: str, new_user_id: str
     ) -> bool:
         """
         Migrate guest user's data to a new registered user.
@@ -256,10 +285,7 @@ class UserService:
 
     @staticmethod
     async def change_password(
-        db: AsyncSession,
-        user_id: str,
-        old_password: str,
-        new_password: str
+        db: AsyncSession, user_id: str, old_password: str, new_password: str
     ) -> bool:
         """
         Change user password.

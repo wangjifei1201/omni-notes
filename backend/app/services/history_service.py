@@ -34,8 +34,11 @@ class HistoryService:
         Returns:
             Tuple of (tasks list, total count)
         """
-        # Build base query
-        query = select(AnalysisTask).where(AnalysisTask.user_id == user_id)
+        # Build base query - only return completed tasks
+        query = select(AnalysisTask).where(
+            AnalysisTask.user_id == user_id,
+            AnalysisTask.status == 'completed'
+        )
 
         # Filter by group if specified
         if group_id:
@@ -105,6 +108,14 @@ class HistoryService:
         )
         group_ids = [row[0] for row in result.fetchall()]
 
+        # Extract summary from result if available
+        summary = None
+        if task.result:
+            if isinstance(task.result, dict):
+                summary = task.result.get("summary")
+            else:
+                summary = getattr(task.result, "summary", None)
+
         return HistoryItem(
             id=task.id,
             platform=task.platform,
@@ -114,7 +125,8 @@ class HistoryService:
             duration=task.duration,
             status=task.status,
             created_at=task.created_at,
-            group_ids=group_ids
+            group_ids=group_ids,
+            summary=summary
         )
 
     @staticmethod
@@ -142,6 +154,7 @@ class HistoryService:
 
         query = select(AnalysisTask).where(
             AnalysisTask.user_id == user_id,
+            AnalysisTask.status == 'completed',
             or_(
                 AnalysisTask.title.ilike(f"%{keyword}%"),
                 AnalysisTask.author.ilike(f"%{keyword}%"),

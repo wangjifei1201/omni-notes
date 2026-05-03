@@ -1,6 +1,7 @@
 """
 User ORM models.
 """
+
 import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, Boolean, Integer, DateTime, Text, ForeignKey
@@ -11,28 +12,40 @@ from app.database import Base
 
 class User(Base):
     """User model for both registered users and guests."""
+
     __tablename__ = "users"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     username = Column(String, unique=True, nullable=False)
     password_hash = Column(String, nullable=False)
+    phone = Column(String(20), unique=True, nullable=True)  # 手机号（微信登录）
+    openid = Column(String(100), unique=True, nullable=True)  # 微信openid
     is_guest = Column(Boolean, default=False)
     usage_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_login_at = Column(DateTime, nullable=True)
 
     # Relationships
-    sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
-    cookies = relationship("UserCookie", back_populates="user", cascade="all, delete-orphan")
-    tasks = relationship("AnalysisTask", back_populates="user", cascade="all, delete-orphan")
+    sessions = relationship(
+        "Session", back_populates="user", cascade="all, delete-orphan"
+    )
+    cookies = relationship(
+        "UserCookie", back_populates="user", cascade="all, delete-orphan"
+    )
+    tasks = relationship(
+        "AnalysisTask", back_populates="user", cascade="all, delete-orphan"
+    )
     groups = relationship("Group", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self):
-        return f"<User(id={self.id}, username={self.username}, is_guest={self.is_guest})>"
+        return (
+            f"<User(id={self.id}, username={self.username}, is_guest={self.is_guest})>"
+        )
 
 
 class Session(Base):
     """Session model for authentication."""
+
     __tablename__ = "sessions"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -49,6 +62,7 @@ class Session(Base):
 
 class UserCookie(Base):
     """Encrypted cookie storage for video platforms."""
+
     __tablename__ = "user_cookies"
 
     id = Column(Integer, primary_key=True, autoincrement=True)

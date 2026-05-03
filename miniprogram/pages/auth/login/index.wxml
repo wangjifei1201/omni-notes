@@ -1,0 +1,49 @@
+<!--pages/auth/login/index.wxml-->
+<view class="container">
+  <view class="content">
+    <view class="logo">🎬</view>
+    <view class="title">Omni-Notes</view>
+    <view class="subtitle">AI视频分析助手</view>
+
+    <!-- 错误提示 -->
+    <view class="error-message" wx:if="{{error}}">{{error}}</view>
+
+    <!-- 主要登录按钮 -->
+    <view class="main-login">
+      <button
+        class="btn-wechat"
+        open-type="getPhoneNumber"
+        bindgetphonenumber="onGetPhoneNumber"
+        loading="{{isLoading}}"
+        disabled="{{isLoading}}"
+      >
+        微信手机号登录
+      </button>
+
+      <button class="btn-guest" bindtap="onGuestLogin" disabled="{{isLoading}}">
+        游客模式
+      </button>
+    </view>
+
+    <!-- 次要登录方式 -->
+    <view class="other-login">
+      <view class="divider">
+        <view class="line"></view>
+        <text class="text">或</text>
+        <view class="line"></view>
+      </view>
+
+      <navigator class="link" url="/pages/auth/register/index">
+        使用邮箱注册/登录
+      </navigator>
+    </view>
+
+    <!-- 用户协议 -->
+    <view class="agreement">
+      <text>登录即表示同意</text>
+      <text class="link">《用户协议》</text>
+      <text>和</text>
+      <text class="link">《隐私政策》</text>
+    </view>
+  </view>
+</view>

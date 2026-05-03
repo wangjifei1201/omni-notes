@@ -1,0 +1,236 @@
+<!--pages/history/index.wxml - 历史记录页-->
+<view class="page-container">
+  <!-- 背景 -->
+  <view class="bg-layer">
+    <view class="bg-gradient"></view>
+    <view class="bg-orb orb-1"></view>
+    <view class="bg-orb orb-2"></view>
+  </view>
+
+  <!-- 顶部导航 -->
+  <view class="nav-header">
+    <view class="nav-left">
+      <button class="back-btn" bindtap="onGoBack">
+        <text class="back-icon">‹</text>
+      </button>
+    </view>
+    <text class="page-title">分析历史</text>
+    <view class="nav-right">
+      <button class="filter-btn" bindtap="onToggleFilter">
+        <text class="filter-icon">◈</text>
+      </button>
+    </view>
+  </view>
+
+  <!-- 搜索栏 -->
+  <view class="search-section">
+    <view class="search-bar">
+      <text class="search-icon">◉</text>
+      <input
+        class="search-input"
+        type="text"
+        placeholder="搜索历史记录..."
+        value="{{searchKeyword}}"
+        bindinput="onSearchInput"
+        placeholder-class="search-placeholder"
+      />
+      <button class="clear-btn" wx:if="{{searchKeyword}}" bindtap="onClearSearch">
+        <text class="clear-icon">✕</text>
+      </button>
+    </view>
+  </view>
+
+  <!-- 筛选标签 -->
+  <view class="filter-section" wx:if="{{showFilter}}">
+    <scroll-view class="filter-scroll" scroll-x="true" show-scrollbar="false">
+      <view class="filter-list">
+        <view
+          class="filter-tag {{currentFilter === 'all' ? 'active' : ''}}"
+          data-filter="all"
+          bindtap="onFilterChange"
+        >
+          <text>全部</text>
+        </view>
+        <view
+          class="filter-tag {{currentFilter === 'today' ? 'active' : ''}}"
+          data-filter="today"
+          bindtap="onFilterChange"
+        >
+          <text>今天</text>
+        </view>
+        <view
+          class="filter-tag {{currentFilter === 'week' ? 'active' : ''}}"
+          data-filter="week"
+          bindtap="onFilterChange"
+        >
+          <text>本周</text>
+        </view>
+        <view
+          class="filter-tag {{currentFilter === 'month' ? 'active' : ''}}"
+          data-filter="month"
+          bindtap="onFilterChange"
+        >
+          <text>本月</text>
+        </view>
+        <view
+          class="filter-tag {{currentFilter === 'favorite' ? 'active' : ''}}"
+          data-filter="favorite"
+          bindtap="onFilterChange"
+        >
+          <text class="tag-icon">★</text>
+          <text>收藏</text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 内容区 -->
+  <scroll-view class="content-area" scroll-y="true" enhanced="true" show-scrollbar="false">
+    <!-- 统计卡片 -->
+    <view class="stats-card">
+      <view class="stat-item">
+        <text class="stat-value">{{stats.total}}</text>
+        <text class="stat-label">总分析</text>
+      </view>
+      <view class="stat-divider"></view>
+      <view class="stat-item">
+        <text class="stat-value">{{stats.today}}</text>
+        <text class="stat-label">今日</text>
+      </view>
+      <view class="stat-divider"></view>
+      <view class="stat-item">
+        <text class="stat-value">{{stats.favorites}}</text>
+        <text class="stat-label">收藏</text>
+      </view>
+    </view>
+
+    <!-- 历史列表 -->
+    <view class="history-list" wx:if="{{filteredHistory.length > 0}}">
+      <view class="list-header">
+        <text class="header-title">最近分析</text>
+        <text class="header-count">{{filteredHistory.length}} 条记录</text>
+      </view>
+
+      <view class="history-items">
+        <view
+          class="history-card {{item.is_favorite ? 'favorite' : ''}}"
+          wx:for="{{filteredHistory}}"
+          wx:key="id"
+          data-id="{{item.id}}"
+          bindtap="onItemClick"
+          bindlongpress="onItemLongPress"
+        >
+          <!-- 视频缩略图 -->
+          <view class="video-thumb">
+            <image class="thumb-image" src="{{item.thumbnail || '/images/default-thumb.png'}}" mode="aspectFill" />
+            <view class="platform-badge {{item.platform}}">
+              <text>{{item.platform === 'bilibili' ? 'B站' : '抖音'}}</text>
+            </view>
+            <view class="duration-badge" wx:if="{{item.duration}}">
+              <text>{{item.duration}}</text>
+            </view>
+          </view>
+
+          <!-- 视频信息 -->
+          <view class="video-info">
+            <view class="info-header">
+              <text class="video-title">{{item.title || '未命名视频'}}</text>
+              <button
+                class="favorite-btn {{item.is_favorite ? 'active' : ''}}"
+                data-id="{{item.id}}"
+                catchtap="onToggleFavorite"
+              >
+                <text class="favorite-icon">{{item.is_favorite ? '★' : '☆'}}</text>
+              </button>
+            </view>
+
+            <view class="video-meta">
+              <text class="meta-item">{{item.analysis_type || '完整分析'}}</text>
+              <text class="meta-dot">•</text>
+              <text class="meta-item">{{item.created_at}}</text>
+            </view>
+
+            <view class="video-tags">
+              <view class="tag" wx:if="{{item.has_summary}}">
+                <text class="tag-icon">◊</text>
+                <text>摘要</text>
+              </view>
+              <view class="tag" wx:if="{{item.has_mindmap}}">
+                <text class="tag-icon">◈</text>
+                <text>导图</text>
+              </view>
+              <view class="tag" wx:if="{{item.has_transcript}}">
+                <text class="tag-icon">◉</text>
+                <text>字幕</text>
+              </view>
+            </view>
+          </view>
+
+          <!-- 更多操作 -->
+          <button class="more-btn" data-id="{{item.id}}" catchtap="onShowActions">
+            <text class="more-icon">◈</text>
+          </button>
+        </view>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <view class="empty-state" wx:if="{{filteredHistory.length === 0}}">
+      <view class="empty-icon-wrap">
+        <view class="empty-glow"></view>
+        <text class="empty-icon">◷</text>
+      </view>
+      <text class="empty-title">暂无记录</text>
+      <text class="empty-desc">{{searchKeyword ? '没有找到匹配的结果' : '开始分析视频，记录将显示在这里'}}</text>
+      <button class="empty-action" bindtap="onGoAnalyze" wx:if="{{!searchKeyword}}">
+        <text>去分析视频</text>
+      </button>
+    </view>
+  </scroll-view>
+
+  <!-- 底部操作栏 -->
+  <view class="bottom-bar" wx:if="{{selectedItems.length > 0}}">
+    <view class="selection-info">
+      <text class="selection-count">已选择 {{selectedItems.length}} 项</text>
+    </view>
+    <view class="selection-actions">
+      <button class="action-btn" bindtap="onBatchFavorite">
+        <text class="action-icon">★</text>
+        <text>收藏</text>
+      </button>
+      <button class="action-btn delete" bindtap="onBatchDelete">
+        <text class="action-icon">◉</text>
+        <text>删除</text>
+      </button>
+    </view>
+  </view>
+
+  <!-- 操作菜单 -->
+  <view class="action-sheet" wx:if="{{showActionSheet}}">
+    <view class="sheet-backdrop" bindtap="onCloseActionSheet"></view>
+    <view class="sheet-content">
+      <view class="sheet-header">
+        <text class="sheet-title">操作</text>
+      </view>
+      <view class="sheet-actions">
+        <button class="sheet-btn" bindtap="onViewDetail">
+          <text class="btn-icon">◈</text>
+          <text class="btn-text">查看详情</text>
+        </button>
+        <button class="sheet-btn" bindtap="onShare">
+          <text class="btn-icon">◉</text>
+          <text class="btn-text">分享</text>
+        </button>
+        <button class="sheet-btn" bindtap="onToggleFavoriteItem">
+          <text class="btn-icon">★</text>
+          <text class="btn-text">{{currentItem.is_favorite ? '取消收藏' : '收藏'}}</text>
+        </button>
+        <button class="sheet-btn delete" bindtap="onDeleteItem">
+          <text class="btn-icon">◉</text>
+          <text class="btn-text">删除</text>
+        </button>
+      </view>
+      <button class="sheet-cancel" bindtap="onCloseActionSheet">取消</button>
+    </view>
+  </view>
+</view>

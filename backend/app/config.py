@@ -1,6 +1,7 @@
 """
 Application configuration using pydantic-settings.
 """
+
 from typing import Optional, List
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field, field_validator
@@ -10,10 +11,7 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=False,
-        extra="ignore"
+        env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore"
     )
 
     # Application
@@ -23,13 +21,12 @@ class Settings(BaseSettings):
     # Database
     database_url: str = Field(
         default="postgresql+asyncpg://user:password@localhost:5432/omni_notes",
-        alias="DATABASE_URL"
+        alias="DATABASE_URL",
     )
 
     # Security
     cookie_encryption_key: str = Field(
-        default="your-secret-key-here-must-be-32-bytes!",
-        alias="COOKIE_ENCRYPTION_KEY"
+        default="your-secret-key-here-must-be-32-bytes!", alias="COOKIE_ENCRYPTION_KEY"
     )
     session_expire_days: int = 7
 
@@ -64,6 +61,12 @@ class Settings(BaseSettings):
     # Guest Mode
     guest_usage_limit: int = 10
 
+    # WeChat MiniProgram Configuration
+    wechat_miniapp_appid: str = Field(
+        default="wx4362fac7e5d92795", alias="WECHAT_MINIAPP_APPID"
+    )
+    wechat_miniapp_secret: str = Field(default="", alias="WECHAT_MINIAPP_SECRET")
+
     @property
     def database_url_async(self) -> str:
         """Ensure database URL uses asyncpg driver."""
@@ -75,7 +78,9 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> List[str]:
         """Parse CORS origins from comma-separated string."""
-        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+        return [
+            origin.strip() for origin in self.cors_origins.split(",") if origin.strip()
+        ]
 
 
 # Global settings instance

@@ -1,6 +1,7 @@
 """
 Pydantic schemas for request/response validation.
 """
+
 from datetime import datetime
 from typing import Optional, List, Literal, Dict, Any
 from pydantic import BaseModel, Field, ConfigDict
@@ -8,8 +9,10 @@ from pydantic import BaseModel, Field, ConfigDict
 
 # ============== User Schemas ==============
 
+
 class UserBase(BaseModel):
     """Base user schema."""
+
     model_config = ConfigDict(from_attributes=True)
 
     username: str = Field(..., min_length=3, max_length=20)
@@ -17,11 +20,13 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     """User creation schema."""
+
     password: str = Field(..., min_length=6)
 
 
 class UserLogin(BaseModel):
     """User login schema."""
+
     model_config = ConfigDict(from_attributes=True)
 
     username: str
@@ -30,6 +35,7 @@ class UserLogin(BaseModel):
 
 class UserResponse(UserBase):
     """User response schema."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -41,17 +47,21 @@ class UserResponse(UserBase):
 
 class GuestUserResponse(BaseModel):
     """Guest user creation response."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
     is_guest: bool
     usage_count: int
+    session_id: Optional[str] = None  # 添加session_id字段
 
 
 # ============== Video Schemas ==============
 
+
 class VideoInfo(BaseModel):
     """Video information schema."""
+
     model_config = ConfigDict(from_attributes=True)
 
     platform: Literal["bilibili", "douyin"]
@@ -67,13 +77,16 @@ class VideoInfo(BaseModel):
 
 class VideoResolveRequest(BaseModel):
     """Video URL resolve request."""
+
     url: str = Field(..., min_length=1)
 
 
 # ============== Analysis Schemas ==============
 
+
 class AnalysisProgress(BaseModel):
     """Analysis progress schema."""
+
     model_config = ConfigDict(from_attributes=True)
 
     step: Literal["extract", "download", "transcribe", "analyze"]
@@ -84,6 +97,7 @@ class AnalysisProgress(BaseModel):
 
 class AnalysisResult(BaseModel):
     """AI analysis result schema."""
+
     model_config = ConfigDict(from_attributes=True)
 
     summary: str
@@ -94,15 +108,23 @@ class AnalysisResult(BaseModel):
 
 class AnalysisTaskCreate(BaseModel):
     """Analysis task creation request."""
+
     url: str = Field(..., min_length=1)
     use_whisper: Optional[bool] = None  # None = use system config
-    whisper_model: Optional[Literal["tiny", "base", "small", "medium"]] = None  # None = use system config
-    analysis_type: Optional[Literal["comprehensive", "summary", "key_points", "chapters", "mindmap", "custom"]] = "comprehensive"
+    whisper_model: Optional[Literal["tiny", "base", "small", "medium"]] = (
+        None  # None = use system config
+    )
+    analysis_type: Optional[
+        Literal[
+            "comprehensive", "summary", "key_points", "chapters", "mindmap", "custom"
+        ]
+    ] = "comprehensive"
     custom_prompt: Optional[str] = None
 
 
 class QueueInfo(BaseModel):
     """Queue information for pending tasks."""
+
     model_config = ConfigDict(from_attributes=True)
 
     position: int
@@ -112,6 +134,7 @@ class QueueInfo(BaseModel):
 
 class AnalysisTaskResponse(BaseModel):
     """Analysis task response schema."""
+
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     task_id: str
@@ -128,15 +151,22 @@ class AnalysisTaskResponse(BaseModel):
     created_at: datetime
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
+    current_step: Optional[str] = (
+        None  # 当前步骤: extract, download, transcribe, analyze
+    )
+    message: Optional[str] = None  # 进度消息
 
 
 class AnalysisTaskDetailResponse(AnalysisTaskResponse):
     """Detailed analysis task response with transcript."""
+
     transcript: Optional[str] = None
+    error_message: Optional[str] = None  # 错误信息（如果有）
 
 
 class AnalysisProgressEvent(BaseModel):
     """SSE progress event."""
+
     step: str
     step_status: str
     percent: int
@@ -145,6 +175,7 @@ class AnalysisProgressEvent(BaseModel):
 
 class QueueStatusEvent(BaseModel):
     """SSE queue status event."""
+
     status: str
     position: int
     estimated_wait_seconds: int
@@ -153,19 +184,23 @@ class QueueStatusEvent(BaseModel):
 
 # ============== Group Schemas ==============
 
+
 class GroupCreate(BaseModel):
     """Group creation request."""
+
     name: str = Field(..., min_length=1, max_length=50)
 
 
 class GroupUpdate(BaseModel):
     """Group update request."""
+
     name: Optional[str] = Field(None, min_length=1, max_length=50)
     sort_order: Optional[int] = None
 
 
 class GroupResponse(BaseModel):
     """Group response schema."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -176,8 +211,10 @@ class GroupResponse(BaseModel):
 
 # ============== History Schemas ==============
 
+
 class HistoryItem(BaseModel):
     """History item schema."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -189,18 +226,22 @@ class HistoryItem(BaseModel):
     status: str
     created_at: datetime
     group_ids: List[str] = []
+    summary: Optional[str] = None  # AI分析摘要
 
 
 class HistoryListResponse(BaseModel):
     """History list response."""
+
     items: List[HistoryItem]
     total: int
 
 
 # ============== Config Schemas ==============
 
+
 class ConfigResponse(BaseModel):
     """Configuration response."""
+
     model_config = ConfigDict(from_attributes=True)
 
     ai_provider: Literal["bailian", "openai"]
@@ -216,6 +257,7 @@ class ConfigResponse(BaseModel):
 
 class ConfigUpdate(BaseModel):
     """Configuration update request."""
+
     ai_provider: Optional[str] = None
     api_key: Optional[str] = None
     base_url: Optional[str] = None
@@ -227,6 +269,7 @@ class ConfigUpdate(BaseModel):
 
 class CookieConfigResponse(BaseModel):
     """Cookie configuration response."""
+
     model_config = ConfigDict(from_attributes=True)
 
     bilibili_cookie: Optional[str] = None
@@ -234,13 +277,16 @@ class CookieConfigResponse(BaseModel):
 
 class CookieConfigUpdate(BaseModel):
     """Cookie configuration update request."""
+
     bilibili_cookie: Optional[str] = None
 
 
 # ============== Error Schemas ==============
 
+
 class ErrorResponse(BaseModel):
     """Error response schema."""
+
     error: str
     message: str
     retry_after: Optional[int] = None

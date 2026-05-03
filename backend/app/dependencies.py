@@ -1,6 +1,7 @@
 """
 FastAPI dependencies for authentication and authorization.
 """
+
 from typing import Optional
 
 from fastapi import Request, HTTPException, Depends
@@ -33,11 +34,14 @@ async def get_db() -> AsyncSession:
 
 
 async def get_current_user(
-    request: Request,
-    db: AsyncSession = Depends(get_db)
+    request: Request, db: AsyncSession = Depends(get_db)
 ) -> Optional[User]:
     """
-    Get current user from session cookie.
+    Get current user from session cookie or Authorization header.
+
+    支持两种验证方式：
+    1. Cookie: session_id cookie
+    2. Authorization header: Bearer session_id
 
     Args:
         request: FastAPI request object
@@ -46,8 +50,15 @@ async def get_current_user(
     Returns:
         User instance or None if not authenticated
     """
-    # Get session ID from cookie
+    # 方式1: 从cookie获取session_id
     session_id = request.cookies.get("session_id")
+
+    # 方式2: 从Authorization header获取session_id（小程序支持）
+    if not session_id:
+        authorization = request.headers.get("Authorization")
+        if authorization and authorization.startswith("Bearer "):
+            session_id = authorization.replace("Bearer ", "")
+
     if not session_id:
         return None
 
@@ -65,8 +76,7 @@ async def get_current_user(
 
 
 async def get_current_user_or_guest(
-    request: Request,
-    db: AsyncSession = Depends(get_db)
+    request: Request, db: AsyncSession = Depends(get_db)
 ) -> User:
     """
     Get current user from session cookie, or create a guest user if not authenticated.
@@ -88,10 +98,7 @@ async def get_current_user_or_guest(
     return guest_user
 
 
-async def require_auth(
-    request: Request,
-    db: AsyncSession = Depends(get_db)
-) -> User:
+async def require_auth(request: Request, db: AsyncSession = Depends(get_db)) -> User:
     """
     Require authentication - raises 401 if not authenticated.
 
@@ -108,16 +115,13 @@ async def require_auth(
     user = await get_current_user(request, db)
     if not user:
         raise HTTPException(
-            status_code=401,
-            detail="请先登录",
-            headers={"WWW-Authenticate": "Bearer"}
+            status_code=401, detail="请先登录", headers={"WWW-Authenticate": "Bearer"}
         )
     return user
 
 
 async def require_registered_user(
-    request: Request,
-    db: AsyncSession = Depends(get_db)
+    request: Request, db: AsyncSession = Depends(get_db)
 ) -> User:
     """
     Require registered user (not guest) - raises 401/403 if not.
@@ -134,16 +138,12 @@ async def require_registered_user(
     """
     user = await require_auth(request, db)
     if user.is_guest:
-        raise HTTPException(
-            status_code=403,
-            detail="此功能需要登录后才能使用"
-        )
+        raise HTTPException(status_code=403, detail="此功能需要登录后才能使用")
     return user
 
 
 async def check_guest_limit(
-    user: User = Depends(require_auth),
-    db: AsyncSession = Depends(get_db)
+    user: User = Depends(require_auth), db: AsyncSession = Depends(get_db)
 ) -> User:
     """
     Check if guest user has reached usage limit.
@@ -168,17 +168,15 @@ async def check_guest_limit(
             detail={
                 "error": "GUEST_LIMIT_REACHED",
                 "message": f"游客体验次数已用完 ({usage_count}/{user.usage_count}次)，请注册账号继续使用",
-                "usage_count": usage_count
-            }
+                "usage_count": usage_count,
+            },
         )
 
     return user
 
 
 async def verify_user_credentials(
-    db: AsyncSession,
-    username: str,
-    password: str
+    db: AsyncSession, username: str, password: str
 ) -> Optional[User]:
     """
     Verify user credentials.

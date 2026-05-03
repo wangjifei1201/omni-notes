@@ -34,6 +34,8 @@ async def get_history(
     - `limit`: Items per page (default: 20, max: 100)
     - `group_id`: Optional group ID to filter
     """
+    print(f"[get_history] user_id={user.id}, page={page}, limit={limit}, group_id={group_id}")
+
     tasks, total = await history_service.list_history(
         db=db,
         user_id=user.id,
@@ -42,12 +44,16 @@ async def get_history(
         group_id=group_id
     )
 
+    print(f"[get_history] 查询结果: tasks_count={len(tasks)}, total={total}")
+
     # Convert to HistoryItem
     items = []
     for task in tasks:
+        print(f"[get_history] 处理任务: id={task.id}, title={task.title}, status={task.status}")
         item = await history_service.to_history_item(db, task)
         items.append(item)
 
+    print(f"[get_history] 返回 {len(items)} 条历史记录")
     return HistoryListResponse(items=items, total=total)
 
 

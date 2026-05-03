@@ -141,12 +141,17 @@ class ProgressService:
                 steps={name: StepInfo() for name in STEP_NAMES},
             )
             self._progress[task_id] = prog
+            print(f"[DEBUG] init_progress: task_id={task_id}, current_step={prog.current_step}")
             return prog
 
     async def get_progress(self, task_id: str) -> Optional[FullTaskProgress]:
         """Return the full progress object (or None)."""
         async with self._lock:
-            return self._progress.get(task_id)
+            prog = self._progress.get(task_id)
+            print(f"[DEBUG] progress_service.get_progress: task_id={task_id}, progress={prog}")
+            if prog:
+                print(f"[DEBUG] progress.current_step={prog.current_step}, status={prog.status}")
+            return prog
 
     async def get_progress_dict(self, task_id: str) -> Dict[str, Any]:
         """Return serialized progress dict for SSE."""
@@ -168,21 +173,30 @@ class ProgressService:
         async with self._lock:
             prog = self._progress.get(task_id)
             if not prog:
+                print(f"[DEBUG] update_step: task_id={task_id}, step={step}, status={status} - PROGRESS NOT FOUND")
                 return
             info = prog.steps.get(step)
             if not info:
+                print(f"[DEBUG] update_step: task_id={task_id}, step={step}, status={status} - STEP NOT FOUND")
                 return
 
+            print(f"[DEBUG] update_step: task_id={task_id}, step={step}, status={status}")
             info.status = status
             now = time.time()
 
             if status == "running":
                 info.start_time = now
                 prog.current_step = step
+                print(f"[DEBUG]   -> current_step set to {step}")
             elif status in ("completed", "skipped"):
                 info.end_time = now
                 if not info.start_time:
                     info.start_time = now
+                # When a step is completed/skipped, advance current_step to next step
+                step_index = STEP_NAMES.index(step) if step in STEP_NAMES else -1
+                if step_index >= 0 and step_index < len(STEP_NAMES) - 1:
+                    prog.current_step = STEP_NAMES[step_index + 1]
+                    print(f"[DEBUG]   -> step completed/skipped, current_step advanced to {STEP_NAMES[step_index + 1]}")
             elif status == "error":
                 info.end_time = now
 

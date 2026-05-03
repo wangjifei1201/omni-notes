@@ -117,6 +117,7 @@ class TaskRunner:
                 # Video has subtitles from API - skip download and transcribe
                 await progress_service.update_step(task_id, "download", "skipped")
                 await progress_service.update_step(task_id, "transcribe", "skipped")
+                await progress_service.update_step(task_id, "analyze", "running")
                 # Also cache API subtitles for future use
                 transcript_cache.save(task.platform, task.video_id, transcript)
             elif task.use_whisper:
@@ -127,6 +128,7 @@ class TaskRunner:
                     print(f"[任务] 使用缓存的转录结果: {task.platform}/{task.video_id}")
                     await progress_service.update_step(task_id, "download", "skipped")
                     await progress_service.update_step(task_id, "transcribe", "skipped")
+                    await progress_service.update_step(task_id, "analyze", "running")
                     await analysis_service.update_transcript(db, task_id, cached)
                     task = await analysis_service.get_task(db, task_id)
                     transcript = task.transcript

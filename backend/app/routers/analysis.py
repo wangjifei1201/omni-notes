@@ -1,6 +1,7 @@
 """
 Analysis router for video analysis tasks.
 """
+
 import asyncio
 from typing import Optional, List
 
@@ -9,11 +10,11 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies import (
-    get_db, require_auth, check_guest_limit
-)
+from app.dependencies import get_db, require_auth, check_guest_limit
 from app.models.schemas import (
-    AnalysisTaskCreate, AnalysisTaskResponse, AnalysisTaskDetailResponse
+    AnalysisTaskCreate,
+    AnalysisTaskResponse,
+    AnalysisTaskDetailResponse,
 )
 from app.services.analysis_service import analysis_service
 from app.services.queue_service import queue_service
@@ -22,12 +23,19 @@ from app.services.bilibili import BilibiliService
 from app.services.douyin import DouyinService
 from app.utils.validators import validate_url, extract_url
 from app.utils.proxy import resolve_proxy_url
-from app.utils.sse import sse_ping, sse_progress_full, sse_queue_status, sse_completed, sse_error
+from app.utils.sse import (
+    sse_ping,
+    sse_progress_full,
+    sse_queue_status,
+    sse_completed,
+    sse_error,
+)
 from app.config import settings
 
 
 class AIModel(BaseModel):
     """AI Model information."""
+
     id: str
     name: str
     provider: str
@@ -40,8 +48,8 @@ router = APIRouter(prefix="/api/v1/analysis", tags=["analysis"])
 @router.post("", response_model=AnalysisTaskResponse)
 async def create_analysis(
     request: AnalysisTaskCreate,
-    user = Depends(check_guest_limit),
-    db: AsyncSession = Depends(get_db)
+    user=Depends(check_guest_limit),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Submit a video for analysis.
@@ -58,8 +66,7 @@ async def create_analysis(
     is_valid, platform = validate_url(url)
     if not is_valid:
         raise HTTPException(
-            status_code=400,
-            detail="不支持的链接格式。目前仅支持B站和抖音视频链接"
+            status_code=400, detail="不支持的链接格式。目前仅支持B站和抖音视频链接"
         )
 
     # Check queue capacity
@@ -70,8 +77,8 @@ async def create_analysis(
             detail={
                 "error": "QUEUE_FULL",
                 "message": "当前分析任务过多，请稍后重试",
-                "retry_after": 300  # Suggest retry after 5 minutes
-            }
+                "retry_after": 300,  # Suggest retry after 5 minutes
+            },
         )
 
     # Resolve proxy for tunnel (video info API requests)
@@ -90,14 +97,17 @@ async def create_analysis(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"解析视频信息失败: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"解析视频信息失败: {str(e)}")
 
     # Resolve use_whisper and whisper_model: request value takes priority, fall back to system config
-    use_whisper = request.use_whisper if request.use_whisper is not None else settings.use_whisper
-    whisper_model = request.whisper_model if request.whisper_model is not None else settings.whisper_model
+    use_whisper = (
+        request.use_whisper if request.use_whisper is not None else settings.use_whisper
+    )
+    whisper_model = (
+        request.whisper_model
+        if request.whisper_model is not None
+        else settings.whisper_model
+    )
 
     # Create task in database
     task = await analysis_service.create_task(
@@ -111,7 +121,7 @@ async def create_analysis(
         cover=video_info.cover,
         duration=video_info.duration,
         use_whisper=use_whisper,
-        whisper_model=whisper_model
+        whisper_model=whisper_model,
     )
 
     # Add to queue
@@ -120,11 +130,13 @@ async def create_analysis(
     # Update guest usage count if guest
     if user.is_guest:
         from app.services.user_service import UserService
+
         await UserService.increment_usage_count(db, user.id)
 
     # If task can run immediately, start it in background
     if queue_result["status"] == "running":
         from app.services.task_runner import task_runner
+
         asyncio.create_task(task_runner.run_task(task.id))
 
     # Return response
@@ -138,7 +150,9 @@ async def create_analysis(
         "duration": task.duration,
         "status": queue_result["status"],
         "queue_position": queue_result.get("queue_info", {}).get("position", 0),
-        "estimated_wait_seconds": queue_result.get("queue_info", {}).get("estimated_wait_seconds", 0),
+        "estimated_wait_seconds": queue_result.get("queue_info", {}).get(
+            "estimated_wait_seconds", 0
+        ),
         "created_at": task.created_at,
     }
 
@@ -149,8 +163,8 @@ async def create_analysis(
 async def get_progress(
     task_id: str,
     request: Request,
-    user = Depends(require_auth),
-    db: AsyncSession = Depends(get_db)
+    user=Depends(require_auth),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get real-time progress updates via Server-Sent Events (SSE).
@@ -209,7 +223,7 @@ async def get_progress(
                     yield sse_queue_status(
                         position=task_info["position"],
                         estimated_wait_seconds=task_info["estimated_wait_seconds"],
-                        message=f"队列中，前面还有 {task_info.get('ahead_count', 0)} 个任务"
+                        message=f"队列中，前面还有 {task_info.get('ahead_count', 0)} 个任务",
                     )
                 else:
                     # Task is running but progress not yet initialized - send ping
@@ -230,27 +244,56 @@ async def get_progress(
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
-            "X-Accel-Buffering": "no"  # Disable nginx buffering
-        }
+            "X-Accel-Buffering": "no",  # Disable nginx buffering
+        },
     )
 
 
 @router.get("/{task_id}", response_model=AnalysisTaskDetailResponse)
 async def get_analysis(
-    task_id: str,
-    user = Depends(require_auth),
-    db: AsyncSession = Depends(get_db)
+    task_id: str, user=Depends(require_auth), db: AsyncSession = Depends(get_db)
 ):
     """
     Get analysis task details and results.
-
     **Authentication**: Required
     """
     task = await analysis_service.get_task(db, task_id, user.id)
     if not task:
         raise HTTPException(status_code=404, detail="任务不存在")
 
-    return {
+    # 获取实时进度信息
+    current_step = None
+    error_msg = None
+
+    # 如果任务在运行中，从进度服务获取当前步骤
+    if task.status in ("queued", "running"):
+        try:
+            progress = await progress_service.get_progress(task_id)
+            print(f"[DEBUG] get_analysis: task_id={task_id}, task.status={task.status}, progress={progress}")
+            if progress:
+                current_step = progress.current_step
+                error_msg = progress.error
+                print(f"[DEBUG] progress.current_step={current_step}")
+        except Exception as e:
+            print(f"[DEBUG] get_analysis exception: {e}")
+            pass
+
+    # 构建响应
+    task_status = str(task.status) if task.status else "pending"
+
+    # 如果 current_step 为 None，根据 task.status 推断一个合理的值
+    if current_step is None:
+        if task_status == "queued":
+            current_step = "extract"  # 队列中时，显示即将开始解析
+        elif task_status == "running":
+            current_step = "extract"  # 运行中但进度未初始化，假设刚开始
+        elif task_status == "completed":
+            current_step = "analyze"  # 已完成时，显示最后一步
+        elif task_status == "failed":
+            current_step = None  # 失败时保持 None
+        # 其他情况如 "pending" 时 current_step 保持 None
+
+    response = {
         "task_id": task.id,
         "platform": task.platform,
         "video_id": task.video_id,
@@ -258,7 +301,7 @@ async def get_analysis(
         "author": task.author,
         "cover": task.cover,
         "duration": task.duration,
-        "status": task.status,
+        "status": task_status,
         "queue_position": task.queue_position or 0,
         "estimated_wait_seconds": task.estimated_wait_seconds or 0,
         "result": task.result,
@@ -266,14 +309,37 @@ async def get_analysis(
         "started_at": task.started_at,
         "completed_at": task.completed_at,
         "transcript": task.transcript,
+        "current_step": current_step,
+        "message": _get_step_message(task_status, current_step),
+        "error_message": error_msg,
     }
+
+    return response
+
+
+def _get_step_message(status: str, current_step: str = None) -> str:
+    """获取步骤消息"""
+    if status == "completed":
+        return "分析完成"
+    elif status == "failed":
+        return "分析失败"
+    elif status == "queued":
+        return "等待处理中..."
+    elif current_step == "extract":
+        return "正在解析视频信息..."
+    elif current_step == "download":
+        return "正在下载视频..."
+    elif current_step == "transcribe":
+        return "正在语音转文字..."
+    elif current_step == "analyze":
+        return "正在AI分析..."
+    else:
+        return "准备开始..."
 
 
 @router.post("/{task_id}/regenerate", response_model=AnalysisTaskResponse)
 async def regenerate_analysis(
-    task_id: str,
-    user = Depends(check_guest_limit),
-    db: AsyncSession = Depends(get_db)
+    task_id: str, user=Depends(check_guest_limit), db: AsyncSession = Depends(get_db)
 ):
     """
     Regenerate analysis for a completed task.
@@ -290,10 +356,7 @@ async def regenerate_analysis(
 
     # Check if task has transcript (required for regeneration)
     if not task.transcript:
-        raise HTTPException(
-            status_code=400,
-            detail="该任务没有字幕数据，无法重新生成"
-        )
+        raise HTTPException(status_code=400, detail="该任务没有字幕数据，无法重新生成")
 
     # Reset task for regeneration
     task = await analysis_service.regenerate_task(db, task_id, user.id)
@@ -304,25 +367,25 @@ async def regenerate_analysis(
     # Increment guest usage if guest
     if user.is_guest:
         from app.services.user_service import UserService
+
         await UserService.increment_usage_count(db, user.id)
 
     # Start task if can run immediately
     if queue_result["status"] == "running":
         from app.services.task_runner import task_runner
+
         asyncio.create_task(task_runner.run_task(task.id, regenerate=True))
 
     return {
         "task_id": task.id,
         "status": queue_result["status"],
-        **queue_result.get("queue_info", {})
+        **queue_result.get("queue_info", {}),
     }
 
 
 @router.get("/{task_id}/status")
 async def get_status(
-    task_id: str,
-    user = Depends(require_auth),
-    db: AsyncSession = Depends(get_db)
+    task_id: str, user=Depends(require_auth), db: AsyncSession = Depends(get_db)
 ):
     """
     Get current task status (non-SSE, for polling).
@@ -344,7 +407,7 @@ async def get_status(
         "task_id": task_id,
         "status": task.status,
         "progress": progress_data,
-        "queue": queue_info.get("task_info")
+        "queue": queue_info.get("task_info"),
     }
 
 
@@ -361,52 +424,49 @@ async def get_models():
             id="qwen3.5-plus",
             name="qwen3.5-plus",
             provider="qwen",
-            description="文本生成、深度思考、视觉理解"
+            description="文本生成、深度思考、视觉理解",
         ),
         AIModel(
             id="qwen3-max-2026-01-23",
             name="qwen3-max",
             provider="qwen",
-            description="文本生成、深度思考"
+            description="文本生成、深度思考",
         ),
         AIModel(
             id="qwen3-coder-next",
             name="qwen3-coder-next",
             provider="qwen",
-            description="文本生成"
+            description="文本生成",
         ),
         AIModel(
             id="qwen3-coder-plus",
             name="qwen3-coder-plus",
             provider="qwen",
-            description="文本生成"
+            description="文本生成",
         ),
         # 智谱
         AIModel(
-            id="glm-5",
-            name="glm-5",
-            provider="zhipu",
-            description="文本生成、深度思考"
+            id="glm-5", name="glm-5", provider="zhipu", description="文本生成、深度思考"
         ),
         AIModel(
             id="glm-4.7",
             name="glm-4.7",
             provider="zhipu",
-            description="文本生成、深度思考"
+            description="文本生成、深度思考",
         ),
         # Kimi
         AIModel(
             id="kimi-k2.5",
             name="kimi-k2.5",
             provider="kimi",
-            description="文本生成、深度思考、视觉理解"
+            description="文本生成、深度思考、视觉理解",
         ),
         # MiniMax
         AIModel(
             id="MiniMax-M2.5",
             name="MiniMax-M2.5",
             provider="minimax",
-            description="文本生成、深度思考"
+            description="文本生成、深度思考",
         ),
     ]
     return models
