@@ -168,7 +168,7 @@
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  min-height: 28px;
+  min-height: 32px;
 }
 
 .summary-content {
@@ -178,12 +178,20 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   line-height: 1.4;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
 }
 
 .summary-text {
   font-size: 13px;
   color: #666;
   line-height: 1.4;
+}
+
+.summary-content:has(.summary-text:empty)::before {
+  content: '暂无分析摘要';
+  color: #bbb;
 }
 
 /* 状态标签样式 */
@@ -254,10 +262,9 @@
   gap: 4px;
   flex: 1;
   min-width: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #999;
 }
 
 .meta-text {

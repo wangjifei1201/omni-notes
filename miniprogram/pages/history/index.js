@@ -76,6 +76,7 @@ Page({
           title: item.title,
           status: item.status,
           platform: item.platform,
+          summary: item.summary,
         });
         return {
           ...item,
@@ -84,6 +85,7 @@ Page({
           status: item.status || 'completed',
           title: item.title || item.video_title || '视频分析',
           video_url: item.video_url || item.original_url || '',
+          summary: item.summary || '', // 确保summary字段存在
           analysis_type: item.analysis_type || '综合分析',
         };
       });

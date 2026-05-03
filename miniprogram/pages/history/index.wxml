@@ -52,8 +52,8 @@
 
         <!-- 第二行：分析摘要 + 状态标签 -->
         <view class="card-summary-row">
-          <view class="summary-content" wx:if="{{item.summary}}">
-            <text class="summary-text">{{item.summary}}</text>
+          <view class="summary-content">
+            <text class="summary-text">{{item.summary || '暂无分析摘要'}}</text>
           </view>
           <view class="status-badge {{item.status}}">
             <text class="status-icon">{{item.status === 'completed' ? '✓' : item.status === 'failed' ? '✕' : '⟳'}}</text>
