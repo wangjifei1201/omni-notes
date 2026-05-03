@@ -179,19 +179,12 @@
   overflow: hidden;
   line-height: 1.4;
   min-height: 28px;
-  display: flex;
-  align-items: center;
 }
 
 .summary-text {
   font-size: 13px;
   color: #666;
   line-height: 1.4;
-}
-
-.summary-content:has(.summary-text:empty)::before {
-  content: '暂无分析摘要';
-  color: #bbb;
 }
 
 /* 状态标签样式 */
