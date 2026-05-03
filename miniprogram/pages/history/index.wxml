@@ -53,9 +53,9 @@
         <!-- 第二行：要点列表 + 状态标签 -->
         <view class="card-keypoints-row">
           <view class="keypoints-content" wx:if="{{item.key_points && item.key_points.length > 0}}">
-            <view class="keypoint-item" wx:for="{{item.key_points}}" wx:key="index" wx:if="{{index < 3}}">
+            <view class="keypoint-item" wx:for="{{item.key_points}}" wx:for-item="point" wx:key="index" wx:if="{{index < 3}}">
               <text class="keypoint-number">{{index + 1}}</text>
-              <text class="keypoint-text">{{item.title ? (item.title.substring ? item.title.substring(0, 50) : item.title) : (item.content ? (item.content.substring ? item.content.substring(0, 50) : item.content) : '')}}</text>
+              <text class="keypoint-text">{{point.title || point.content || ''}}</text>
             </view>
           </view>
           <view class="status-badge {{item.status}}">

@@ -78,8 +78,9 @@ Page({
           platform: item.platform,
           summary: item.summary,
           key_points: item.key_points,
+          key_points_length: item.key_points ? item.key_points.length : 0,
         });
-        return {
+        const processed = {
           ...item,
           x: 0, // 初始化X坐标为0（未滑动）
           // 确保状态字段存在
@@ -90,6 +91,11 @@ Page({
           key_points: item.key_points || [], // 确保key_points字段存在
           analysis_type: item.analysis_type || '综合分析',
         };
+        console.log(`[loadHistory] 处理后的第 ${index} 条记录:`, {
+          key_points: processed.key_points,
+          key_points_length: processed.key_points.length,
+        });
+        return processed;
       });
 
       console.log('[loadHistory] 处理后的历史记录数:', history.length);
