@@ -37,49 +37,57 @@
         bindtap="onItemClick"
         bindlongpress="onItemLongPress"
       >
-        <!-- 收藏按钮（固定在右上角） -->
-        <button
-          class="card-favorite-btn {{item.is_favorite ? 'active' : ''}}"
-          data-history-id="{{item.id}}"
-          data-is-favorite="{{item.is_favorite}}"
-          catchtap="onToggleFavorite"
-        >
-          <text class="favorite-icon">{{item.is_favorite ? '★' : '☆'}}</text>
-        </button>
+        <!-- 左侧内容区 -->
+        <view class="card-content">
+          <!-- 第一行：标题 -->
+          <view class="card-title-row">
+            <text class="card-title">{{item.title || '未命名视频'}}</text>
+          </view>
 
-        <!-- 更多按钮（固定在右下角） -->
-        <button class="card-more-btn" data-id="{{item.id}}" catchtap="onShowActions">
-          <text class="more-icon">···</text>
-        </button>
-
-        <!-- 第一行：标题 -->
-        <view class="card-title-row">
-          <text class="card-title">{{item.title || '未命名视频'}}</text>
-        </view>
-
-        <!-- 第二行：要点列表 + 状态标签 -->
-        <view class="card-keypoints-row">
-          <view class="keypoints-content" wx:if="{{item.key_points && item.key_points.length > 0}}">
-            <view class="keypoint-item" wx:for="{{item.key_points}}" wx:for-item="point" wx:key="index" wx:if="{{index < 3}}">
-              <text class="keypoint-number">{{index + 1}}</text>
-              <text class="keypoint-text">{{point.point}}</text>
+          <!-- 第二行：要点列表 -->
+          <view class="card-keypoints-row">
+            <view class="keypoints-content" wx:if="{{item.key_points && item.key_points.length > 0}}">
+              <view class="keypoint-item" wx:for="{{item.key_points}}" wx:for-item="point" wx:key="index" wx:if="{{index < 3}}">
+                <text class="keypoint-number">{{index + 1}}</text>
+                <text class="keypoint-text">{{point.point}}</text>
+              </view>
             </view>
           </view>
+
+          <!-- 第三行：视频元信息（作者 · 出处 · 时间） -->
+          <view class="card-meta-row">
+            <view class="meta-content">
+              <text class="meta-text">{{item.author || '未知作者'}}</text>
+              <text class="meta-sep">·</text>
+              <text class="meta-platform {{item.platform}}">{{item.platform === 'bilibili' ? 'B站' : '抖音'}}</text>
+              <text class="meta-sep">·</text>
+              <text class="meta-time">{{item.created_at}}</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 右侧操作栏 -->
+        <view class="card-actions-bar">
+          <!-- 收藏按钮 -->
+          <button
+            class="card-favorite-btn {{item.is_favorite ? 'active' : ''}}"
+            data-history-id="{{item.id}}"
+            data-is-favorite="{{item.is_favorite}}"
+            catchtap="onToggleFavorite"
+          >
+            <text class="favorite-icon">{{item.is_favorite ? '★' : '☆'}}</text>
+          </button>
+
+          <!-- 状态标签 -->
           <view class="status-badge {{item.status}}">
             <text class="status-icon">{{item.status === 'completed' ? '✓' : item.status === 'failed' ? '✕' : '⟳'}}</text>
             <text class="status-text">{{item.status === 'completed' ? '已完成' : item.status === 'failed' ? '失败' : '进行中'}}</text>
           </view>
-        </view>
 
-        <!-- 第三行：视频元信息（作者 · 出处 · 时间） -->
-        <view class="card-meta-row">
-          <view class="meta-content">
-            <text class="meta-text">{{item.author || '未知作者'}}</text>
-            <text class="meta-sep">·</text>
-            <text class="meta-platform {{item.platform}}">{{item.platform === 'bilibili' ? 'B站' : '抖音'}}</text>
-            <text class="meta-sep">·</text>
-            <text class="meta-time">{{item.created_at}}</text>
-          </view>
+          <!-- 更多按钮 -->
+          <button class="card-more-btn" data-id="{{item.id}}" catchtap="onShowActions">
+            <text class="more-icon">···</text>
+          </button>
         </view>
       </view>
     </view>
