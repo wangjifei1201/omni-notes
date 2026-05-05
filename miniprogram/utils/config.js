@@ -9,12 +9,12 @@ const ENV = {
 };
 
 // 当前环境 (开发时改为 ENV.DEV，上线时改为 ENV.PROD)
-const currentEnv = ENV.DEV;
+const currentEnv = ENV.PROD;
 
 // API 地址配置
 const API_URLS = {
   [ENV.DEV]: 'http://192.168.1.163:8000/api/v1',      // 本地开发（局域网IP）
-  [ENV.PROD]: 'https://your-domain.com/api/v1',   // 生产环境，请修改为实际地址
+  [ENV.PROD]: 'https://wangxiyue.cloud/api/v1',   // 生产环境
 };
 
 // 导出配置
