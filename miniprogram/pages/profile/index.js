@@ -10,7 +10,6 @@ Page({
     },
     userStats: {
       analysisCount: 0,
-      favoriteCount: 0,
       daysJoined: 0,
     },
   },
@@ -39,7 +38,6 @@ Page({
     const state = store.getState();
     const history = state.analysisHistory || [];
     const analysisCount = history.length;
-    const favoriteCount = history.filter(h => h.is_favorite).length;
 
     // 计算使用天数
     let daysJoined = 0;
@@ -52,7 +50,6 @@ Page({
     this.setData({
       userStats: {
         analysisCount,
-        favoriteCount,
         daysJoined,
       },
     });

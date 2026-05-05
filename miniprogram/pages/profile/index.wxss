@@ -81,16 +81,6 @@
   color: #1a1a2e;
 }
 
-.user-badge {
-  font-size: 12px;
-  color: #7c3aed;
-  background: rgba(124, 58, 237, 0.1);
-  padding: 4px 10px;
-  border-radius: 8px;
-  display: inline-block;
-  width: fit-content;
-}
-
 /* 用户统计 */
 .user-stats {
   display: flex;
