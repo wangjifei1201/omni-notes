@@ -9,24 +9,25 @@ Page({
     groups: [],
     isLoading: true,
     error: null,
-    selectedGroup: null,
+    selectedGroupId: 'all',  // 当前选中的分组ID
+    totalCount: 0,
+    ungroupedCount: 0,
     sortBy: 'recent',
     sortByIndex: 0,
     searchText: '',
     searchKeyword: '',     // wxml 搜索关键词
-    showFilter: false,     // 筛选面板显示
-    currentFilter: 'all',  // 当前筛选条件
     showActionSheet: false, // 操作菜单
     currentItem: {},       // 当前操作项
-    selectedItems: [],     // 多选项
-    stats: {               // 统计数据
-      total: 0,
-      today: 0,
-      favorites: 0,
+    showGroupPicker: false, // 分组选择面板
+    showGroupManager: false, // 分组管理面板
+    showAddGroupModal: false, // 新建分组弹窗
+    editingGroupId: null,  // 编辑中的分组ID
+    groupFormData: {        // 分组表单数据
+      name: '',
+      description: '',
     },
     sortOptions: [
       { label: '最新', value: 'recent' },
-      { label: '收藏', value: 'favorite' },
     ],
     startX: 0,
     delBtnWidth: 80,
@@ -34,22 +35,20 @@ Page({
 
   onLoad() {
     this.loadHistory();
-    this.loadGroups();
   },
 
   onShow() {
-    // 每次显示时刷新历史记录
+    // 每次显示时刷新历史记录和分组
     this.loadHistory();
+    this.loadGroups();
   },
 
   // 加载历史记录
   async loadHistory() {
     try {
-      console.log('[loadHistory] 开始加载历史记录');
       this.setData({ isLoading: true, error: null });
 
       const params = {
-        group_id: this.data.selectedGroup,
         sort_by: this.data.sortBy,
       };
 
@@ -57,77 +56,66 @@ Page({
         params.search = this.data.searchText;
       }
 
-      console.log('[loadHistory] 请求参数:', params);
-
       const response = await historyApi.getList(params);
 
-      console.log('[loadHistory] API 响应完整数据:', response);
-      console.log('[loadHistory] 响应类型:', typeof response);
-      console.log('[loadHistory] 响应属性:', Object.keys(response || {}));
-      console.log('[loadHistory] response.items:', response.items);
-      console.log('[loadHistory] response.items 类型:', typeof response.items);
-      console.log('[loadHistory] response.items 是数组?', Array.isArray(response.items));
-      console.log('[loadHistory] response.items 长度:', Array.isArray(response.items) ? response.items.length : 'N/A');
-
-      // 处理历史记录，确保状态正确
-      const history = (response.items || []).map((item, index) => {
-        console.log(`[loadHistory] 处理第 ${index} 条记录:`, {
-          id: item.id,
-          title: item.title,
-          status: item.status,
-          platform: item.platform,
-          summary: item.summary,
-          key_points: item.key_points,
-          key_points_length: item.key_points ? item.key_points.length : 0,
-        });
-
-        // 截断关键要点，保持在50字以内
+      // 处理历史记录
+      let history = (response.items || []).map((item, index) => {
         const processedKeyPoints = (item.key_points || []).map(kp => ({
           ...kp,
           point: (kp.point || '').substring(0, 50)
         }));
 
-        const processed = {
+        return {
           ...item,
-          x: 0, // 初始化X坐标为0（未滑动）
-          // 确保状态字段存在
+          x: 0,
           status: item.status || 'completed',
           title: item.title || item.video_title || '视频分析',
           video_url: item.video_url || item.original_url || '',
-          summary: item.summary || '', // 确保summary字段存在
-          key_points: processedKeyPoints, // 处理过的key_points
+          summary: item.summary || '',
+          key_points: processedKeyPoints,
           analysis_type: item.analysis_type || '综合分析',
         };
-        console.log(`[loadHistory] 处理后的第 ${index} 条记录key_points:`, processed.key_points);
-        return processed;
       });
 
-      console.log('[loadHistory] 处理后的历史记录数:', history.length);
-      console.log('[loadHistory] 处理后的历史记录:', history);
+      // 计算分组统计数据
+      const totalCount = history.length;
+      const ungroupedCount = history.filter(h => !h.group_id).length;
+
+      // 为每个分组计算视频数量
+      const groupsWithCount = this.data.groups.map(g => ({
+        ...g,
+        video_count: history.filter(h => h.group_id === g.id).length,
+      }));
+
+      // 根据选中分组筛选
+      let filteredHistory = history;
+      if (this.data.selectedGroupId === 'ungrouped') {
+        filteredHistory = history.filter(h => !h.group_id);
+      } else if (this.data.selectedGroupId && this.data.selectedGroupId !== 'all') {
+        filteredHistory = history.filter(h => h.group_id === this.data.selectedGroupId);
+      }
+
+      // 应用搜索过滤
+      if (this.data.searchKeyword) {
+        const kw = this.data.searchKeyword.toLowerCase();
+        filteredHistory = filteredHistory.filter(item =>
+          (item.title && item.title.toLowerCase().includes(kw)) ||
+          (item.video_url && item.video_url.toLowerCase().includes(kw))
+        );
+      }
 
       this.setData({
         history,
-        filteredHistory: history,
+        filteredHistory,
+        groups: groupsWithCount,
+        totalCount,
+        ungroupedCount,
         isLoading: false,
       });
 
-      console.log('[loadHistory] setData 完成');
-      console.log('[loadHistory] 当前数据状态:', {
-        historyLength: this.data.history.length,
-        filteredHistoryLength: this.data.filteredHistory.length,
-      });
-
-      // 计算统计数据
-      this.updateStats(history);
-
-      // 更新 store
       store.setAnalysisHistory(history);
-
-      console.log('[loadHistory] 历史记录加载完成');
-
     } catch (error) {
-      console.error('[ERROR] 加载历史记录失败:', error);
-      console.error('[ERROR] 错误详情:', error.message || error);
+      console.error('加载历史记录失败:', error);
       this.setData({
         error: error.message || '加载失败',
         isLoading: false,
@@ -146,21 +134,12 @@ Page({
     }
   },
 
-  // 搜索
-  onSearch(e) {
-    this.setData({ searchText: e.detail.value });
-  },
-
-  // 执行搜索
-  onSearchSubmit() {
-    this.loadHistory();
-  },
-
-  // 选择分组
-  onSelectGroup(e) {
-    const { groupId } = e.currentTarget.dataset;
+  // 切换分组
+  onGroupChange(e) {
+    const groupId = e.currentTarget.dataset.groupId;
     this.setData({
-      selectedGroup: this.data.selectedGroup === groupId ? null : groupId,
+      selectedGroupId: groupId,
+      searchKeyword: '', // 清空搜索
     });
     this.loadHistory();
   },
@@ -178,7 +157,6 @@ Page({
   // 点击历史记录项
   onHistoryItemClick(e) {
     const { historyId } = e.currentTarget.dataset;
-    console.log('点击历史记录:', historyId);
     
     // 查找对应的历史记录
     const item = this.data.history.find(h => h.id === historyId);
@@ -208,36 +186,6 @@ Page({
       // 处理中，跳转到详情页查看进度
       wx.navigateTo({
         url: `/pages/analysis/detail/index?taskId=${historyId}`,
-      });
-    }
-  },
-
-  // 切换收藏
-  async onToggleFavorite(e) {
-    e.stopPropagation(); // 阻止事件冒泡
-    const { historyId, isFavorite } = e.currentTarget.dataset;
-    
-    try {
-      await historyApi.toggleFavorite(historyId, !isFavorite);
-      
-      // 更新本地状态
-      const history = this.data.history.map(item => {
-        if (item.id === historyId) {
-          return { ...item, is_favorite: !isFavorite };
-        }
-        return item;
-      });
-      
-      this.setData({ history });
-      
-      wx.showToast({
-        title: isFavorite ? '已取消收藏' : '已收藏',
-        icon: 'success',
-      });
-    } catch (error) {
-      wx.showToast({
-        title: error.message || '操作失败',
-        icon: 'error',
       });
     }
   },
@@ -310,28 +258,14 @@ Page({
     wx.navigateBack();
   },
 
-  // 切换筛选面板显示
-  onToggleFilter() {
-    this.setData({ showFilter: !this.data.showFilter });
-  },
-
   // 搜索输入
   onSearchInput(e) {
     this.setData({ searchKeyword: e.detail.value });
-    this.applyFilter();
   },
 
   // 清除搜索
   onClearSearch() {
     this.setData({ searchKeyword: '' });
-    this.applyFilter();
-  },
-
-  // 筛选标签切换
-  onFilterChange(e) {
-    const filter = e.currentTarget.dataset.filter;
-    this.setData({ currentFilter: filter });
-    this.applyFilter();
   },
 
   // 项目点击（兼容新旧模板）
@@ -344,7 +278,14 @@ Page({
 
   // 长按（兼容新旧模板）
   onItemLongPress(e) {
-    // 可以显示更多操作菜单
+    const id = e.currentTarget.dataset.id || e.currentTarget.dataset.historyId;
+    const item = this.data.history.find(h => h.id === id);
+    if (item) {
+      this.setData({
+        showActionSheet: true,
+        currentItem: item,
+      });
+    }
   },
 
   // 显示操作菜单
@@ -352,9 +293,9 @@ Page({
     const { id } = e.currentTarget.dataset;
     const item = this.data.history.find(h => h.id === id);
     if (item) {
-      this.setData({ 
-        showActionSheet: true, 
-        currentItem: item 
+      this.setData({
+        showActionSheet: true,
+        currentItem: item,
       });
     }
   },
@@ -364,64 +305,147 @@ Page({
     this.setData({ showActionSheet: false });
   },
 
-  // 去分析页面
-  onGoAnalyze() {
-    wx.switchTab({ url: '/pages/index/index' });
+  // 打开分组管理面板
+  onOpenGroupManager() {
+    this.setData({ showGroupManager: true });
   },
 
-  // 计算统计数据
-  updateStats(history) {
-    const total = history.length;
-    const today = history.filter(item => {
-      if (!item.created_at) return false;
-      const d = new Date(item.created_at);
-      const now = new Date();
-      return d.toDateString() === now.toDateString();
-    }).length;
-    const favorites = history.filter(item => item.is_favorite).length;
+  // 关闭分组管理面板
+  onCloseGroupManager() {
+    this.setData({ showGroupManager: false });
+  },
+
+  // 显示新建分组弹窗
+  onShowAddGroupModal() {
     this.setData({
-      stats: { total, today, favorites },
+      showAddGroupModal: true,
+      editingGroupId: null,
+      groupFormData: { name: '', description: '' },
     });
   },
 
-  // 应用筛选
-  applyFilter() {
-    const { history, currentFilter, searchKeyword } = this.data;
-    let filtered = [...history];
+  // 关闭新建分组弹窗
+  onCloseAddGroupModal() {
+    this.setData({
+      showAddGroupModal: false,
+      editingGroupId: null,
+      groupFormData: { name: '', description: '' },
+    });
+  },
 
-    // 关键词过滤
-    if (searchKeyword) {
-      const kw = searchKeyword.toLowerCase();
-      filtered = filtered.filter(item =>
-        (item.title && item.title.toLowerCase().includes(kw)) ||
-        (item.video_url && item.video_url.toLowerCase().includes(kw))
-      );
+  // 编辑分组
+  onEditGroup(e) {
+    const groupId = e.currentTarget.dataset.groupId;
+    const group = this.data.groups.find(g => g.id === groupId);
+    if (group) {
+      this.setData({
+        showAddGroupModal: true,
+        editingGroupId: groupId,
+        groupFormData: {
+          name: group.name || '',
+          description: group.description || '',
+        },
+      });
+    }
+  },
+
+  // 输入分组名称
+  onGroupNameInput(e) {
+    this.setData({ 'groupFormData.name': e.detail.value });
+  },
+
+  // 输入分组描述
+  onGroupDescInput(e) {
+    this.setData({ 'groupFormData.description': e.detail.value });
+  },
+
+  // 保存分组
+  async onSaveGroup() {
+    const { groupFormData, editingGroupId } = this.data;
+
+    if (!groupFormData.name.trim()) {
+      wx.showToast({ title: '请输入分组名称', icon: 'error' });
+      return;
     }
 
-    // 时间/收藏过滤
-    const now = new Date();
-    if (currentFilter === 'today') {
-      filtered = filtered.filter(item => {
-        if (!item.created_at) return false;
-        return new Date(item.created_at).toDateString() === now.toDateString();
+    try {
+      if (editingGroupId) {
+        // 编辑模式 - 更新分组
+        const { groupsApi } = require('../../utils/api');
+        await groupsApi.update(editingGroupId, groupFormData.name, groupFormData.description);
+        wx.showToast({ title: '分组已更新', icon: 'success' });
+      } else {
+        // 新建模式
+        const { groupsApi } = require('../../utils/api');
+        await groupsApi.create(groupFormData.name, groupFormData.description);
+        wx.showToast({ title: '分组已创建', icon: 'success' });
+      }
+      this.setData({
+        showAddGroupModal: false,
+        editingGroupId: null,
+        groupFormData: { name: '', description: '' },
       });
-    } else if (currentFilter === 'week') {
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      filtered = filtered.filter(item => {
-        if (!item.created_at) return false;
-        return new Date(item.created_at) >= weekAgo;
-      });
-    } else if (currentFilter === 'month') {
-      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      filtered = filtered.filter(item => {
-        if (!item.created_at) return false;
-        return new Date(item.created_at) >= monthAgo;
-      });
-    } else if (currentFilter === 'favorite') {
-      filtered = filtered.filter(item => item.is_favorite);
+      this.loadGroups();
+      this.loadHistory();
+    } catch (error) {
+      wx.showToast({ title: error.message || '操作失败', icon: 'error' });
     }
+  },
 
-    this.setData({ filteredHistory: filtered });
+  // 删除分组确认
+  onDeleteGroupConfirm(e) {
+    const groupId = e.currentTarget.dataset.groupId;
+    const group = this.data.groups.find(g => g.id === groupId);
+    if (group) {
+      wx.showModal({
+        title: '删除分组',
+        content: `确定要删除分组"${group.name}"吗？分组下的任务将移至未分组。`,
+        success: async (res) => {
+          if (res.confirm) {
+            try {
+              const { groupsApi } = require('../../utils/api');
+              await groupsApi.delete(groupId);
+              wx.showToast({ title: '分组已删除', icon: 'success' });
+              this.loadGroups();
+              this.loadHistory();
+            } catch (error) {
+              wx.showToast({ title: error.message || '删除失败', icon: 'error' });
+            }
+          }
+        },
+      });
+    }
+  },
+
+  // 移动到分组 - 显示分组选择面板
+  onMoveToGroup() {
+    const { currentItem } = this.data;
+    this.setData({
+      showActionSheet: false,
+      showGroupPicker: true,
+    });
+  },
+
+  // 关闭分组选择面板
+  onCloseGroupPicker() {
+    this.setData({ showGroupPicker: false });
+  },
+
+  // 确认移动到分组
+  async onConfirmMoveToGroup(e) {
+    const groupId = e.currentTarget.dataset.groupId;
+    const { currentItem } = this.data;
+
+    try {
+      const { historyApi } = require('../../utils/api');
+      await historyApi.updateGroup(currentItem.id, groupId === 'ungrouped' ? null : groupId);
+      wx.showToast({ title: '已移动', icon: 'success' });
+      this.setData({ showGroupPicker: false });
+      this.loadHistory();
+      this.loadGroups();
+    } catch (error) {
+      wx.showToast({ title: error.message || '移动失败', icon: 'error' });
+    }
   },
 
   // 查看详情
@@ -444,23 +468,6 @@ Page({
     });
   },
 
-  // 切换收藏（操作菜单）
-  onToggleFavoriteItem() {
-    const { currentItem } = this.data;
-    this.setData({ showActionSheet: false });
-    if (currentItem) {
-      this.onToggleFavorite({
-        stopPropagation: () => {},
-        currentTarget: {
-          dataset: {
-            historyId: currentItem.id,
-            isFavorite: currentItem.is_favorite,
-          },
-        },
-      });
-    }
-  },
-
   // 删除单项（操作菜单）
   onDeleteItem() {
     const { currentItem } = this.data;
@@ -472,13 +479,8 @@ Page({
     }
   },
 
-  // 批量收藏
-  onBatchFavorite() {
-    wx.showToast({ title: '批量收藏功能开发中', icon: 'none' });
-  },
-
-  // 批量删除
-  onBatchDelete() {
-    wx.showToast({ title: '批量删除功能开发中', icon: 'none' });
+  // 去分析页面
+  onGoAnalyze() {
+    wx.switchTab({ url: '/pages/index/index' });
   },
 });
