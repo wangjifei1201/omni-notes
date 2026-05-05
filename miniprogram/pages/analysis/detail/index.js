@@ -84,8 +84,6 @@ Page({
 
   onLoad(options) {
     const { taskId } = options;
-    console.log('=== 详情页 onLoad ===');
-    console.log('传入的 taskId:', taskId);
 
     if (!taskId) {
       this.setData({
@@ -100,7 +98,6 @@ Page({
 
     // 设置当前任务ID（实例变量，不受 setData 影响）
     this.currentTaskId = taskId;
-    console.log('[INIT] 设置 this.currentTaskId =', this.currentTaskId);
 
     // 更新页面数据
     this.setData({
@@ -132,37 +129,23 @@ Page({
     this.loadGroups();
 
     // 加载任务详情并启动进度跟踪
-    console.log('[INIT] 开始加载任务详情');
     this.loadTaskDetails();
   },
 
   onShow() {
-    console.log('=== 详情页 onShow ===');
-    console.log('当前 taskId:', this.currentTaskId);
-    console.log('当前轮询状态:', {
-      progressInterval: !!this.progressInterval,
-      currentTaskId: this.currentTaskId,
-      taskStatus: this.data.task?.status,
-    });
-
     // 如果任务在运行中但没有轮询，重新启动轮询
     if (this.currentTaskId && this.data.task && (this.data.task.status === 'running' || this.data.task.status === 'queued' || this.data.task.status === 'processing')) {
       if (!this.progressInterval) {
-        console.log('[onShow] 页面回到前台，任务未完成但没有轮询，重新启动轮询');
         this.startProgressTracking();
-      } else {
-        console.log('[onShow] 轮询已在运行');
       }
     }
   },
 
   onUnload() {
-    console.log('=== 详情页 onUnload ===');
     this.cleanupInterval();
   },
 
   onHide() {
-    console.log('=== 详情页 onHide ===');
     // 页面隐藏时也可以暂停轮询，节省资源
     this.cleanupInterval();
   },
@@ -170,12 +153,10 @@ Page({
   // 清理定时器（核心修复）
   cleanupInterval() {
     if (this.progressInterval) {
-      console.log('清理旧的定时器');
       clearInterval(this.progressInterval);
       this.progressInterval = null;
     }
     if (this.timerInterval) {
-      console.log('清理计时器');
       clearInterval(this.timerInterval);
       this.timerInterval = null;
     }
@@ -226,7 +207,7 @@ Page({
   },
 
   // ===== 构建 analysis 对象（wxml 模板数据源） =====
-  buildAnalysisObject(result, keypoints, mindmap, chapters) {
+  buildAnalysisObject(result, keypoints, mindmap) {
     const analysisResult = result.result || {};
 
     // 解析视频信息（兼容多种 API 返回格式）
@@ -309,23 +290,12 @@ Page({
   // 加载任务详情
   async loadTaskDetails() {
     try {
-      console.log('[loadTaskDetails] 开始加载任务详情, taskId:', this.currentTaskId);
       this.setData({ isLoading: true, error: null });
 
       const result = await analysisApi.getById(this.currentTaskId);
 
-      console.log('========== loadTaskDetails API Response ==========');
-      console.log('任务详情:', JSON.stringify(result, null, 2));
-      console.log('任务状态(result.status):', result.status);
-      console.log('当前步骤(result.current_step):', result.current_step);
-      console.log('消息(result.message):', result.message);
-      console.log('分析结果:', result.result);
-      console.log('分组信息 - group_id:', result.group_id, 'group_name:', result.group_name);
-      console.log('================================================');
-
       // 获取任务状态（兼容多种字段名）
       const taskStatus = result.status || result.state || 'pending';
-      console.log('[loadTaskDetails] 任务状态(taskStatus):', taskStatus);
 
       // 提取分析结果数据（注意：result.result 才是分析结果）
       const analysisResult = result.result || {};
@@ -395,7 +365,7 @@ Page({
       }
 
       // 构建 wxml 所需的 analysis 对象
-      const analysis = this.buildAnalysisObject(result, keypoints, mindmap, chapters);
+      const analysis = this.buildAnalysisObject(result, keypoints, mindmap);
 
       // 获取状态文本
       let statusText = '准备中';
@@ -404,9 +374,6 @@ Page({
       else if (taskStatus === 'queued') statusText = '排队中';
       else if (taskStatus === 'processing' || taskStatus === 'running') statusText = '分析中';
       else if (taskStatus === 'pending') statusText = '准备中';
-
-      console.log('[loadTaskDetails] 状态文本:', statusText);
-      console.log('[loadTaskDetails] 设置 task.status =', taskStatus);
 
       this.setData({
         result: result,
@@ -431,18 +398,9 @@ Page({
       // updateProgressDisplay already sets stepStatus, currentStep, currentMessage, etc.
       this.updateProgressDisplay(result);
 
-      // 关键改进：改变轮询启动的策略
-      // 不再依赖 taskStatus 判断，而是在轮询中检查状态
-      console.log('[loadTaskDetails] ========== 轮询启动决策 ==========');
-      console.log('[loadTaskDetails] taskStatus:', taskStatus);
-      console.log('[loadTaskDetails] this.currentTaskId:', this.currentTaskId);
-
       // 始终启动轮询，轮询中会自己检查是否完成并停止
       if (this.currentTaskId) {
-        console.log('[loadTaskDetails] 启动轮询，轮询中将检查任务状态');
         this.startProgressTracking();
-      } else {
-        console.log('[ERROR] this.currentTaskId 为空，无法启动轮询');
       }
 
     } catch (error) {
@@ -457,8 +415,6 @@ Page({
   // 格式化思维导图为 Markdown 有序列表格式
   formatMindmap(mindmapObj) {
     if (!mindmapObj) return '';
-
-    console.log('格式化思维导图，数据结构:', typeof mindmapObj);
 
     try {
       if (typeof mindmapObj === 'string') {
@@ -572,15 +528,8 @@ Page({
   // 更新进度显示
   updateProgressDisplay(result) {
     if (!result) {
-      console.log('updateProgressDisplay: result is null/undefined, skipping');
       return;
     }
-
-    console.log('========== updateProgressDisplay ==========');
-    console.log('result.status:', result.status);
-    console.log('result.current_step:', result.current_step);
-    console.log('result.message:', result.message);
-    console.log('===========================================');
 
     let overallProgress = 0;
     let currentStep = 'extract';
@@ -589,7 +538,6 @@ Page({
 
     // 获取任务状态（兼容多种字段名）
     const taskStatus = result.status || result.state || 'pending';
-    console.log('任务状态:', taskStatus, '原始:', result.status);
 
     // 计算步骤名称
     const stepNames = {
@@ -608,7 +556,6 @@ Page({
         inferredStep = 'analyze';  // 已完成，显示最后一步
       }
     }
-    console.log('推断的 current_step:', inferredStep);
 
     if (taskStatus === 'completed') {
       overallProgress = 100;
@@ -662,8 +609,6 @@ Page({
     // 获取当前步骤名称
     const currentStepName = stepNames[currentStep] || '准备开始...';
 
-    console.log('currentStep:', currentStep, 'currentStepName:', currentStepName, 'currentMessage:', currentMessage);
-
     this.setData({
       overallProgress,
       currentStep,
@@ -711,45 +656,22 @@ Page({
 
   // 启动进度跟踪
   startProgressTracking() {
-    console.log('========== 启动进度跟踪开始 ==========');
-    console.log('taskId:', this.currentTaskId);
-    console.log('this.currentTaskId 存在:', !!this.currentTaskId);
-
     this.cleanupInterval();
 
     const self = this;
     this.progressInterval = setInterval(async () => {
-      console.log('========== 轮询回调执行 ==========');
-      console.log('self.progressInterval:', self.progressInterval);
-      console.log('self.currentTaskId:', self.currentTaskId);
-
       if (!self.progressInterval || !self.currentTaskId) {
-        console.log('[ERROR] 定时器或 taskId 无效，停止轮询');
-        console.log('progressInterval:', self.progressInterval);
-        console.log('currentTaskId:', self.currentTaskId);
         self.cleanupInterval();
         return;
       }
 
       try {
-        console.log('[INFO] 开始调用 API 获取任务信息，taskId:', self.currentTaskId);
         const result = await analysisApi.getById(self.currentTaskId);
-
-        console.log('========== Polling Response ==========');
-        console.log('status:', result.status);
-        console.log('current_step:', result.current_step);
-        console.log('message:', result.message);
-        console.log('has result.result:', !!result.result);
-        if (result.result) {
-          console.log('result.result.summary length:', (result.result.summary || '').length);
-          console.log('result.result.key_points:', result.result.key_points?.length || 0);
-        }
-        console.log('=====================================');
 
         // 更新进度显示
         self.updateProgressDisplay(result);
 
-        // 关键修复：更新分析结果数据（如果有的话）
+        // 更新分析结果数据（如果有的话）
         if (result.result) {
           const analysisResult = result.result || {};
 
@@ -796,7 +718,7 @@ Page({
 
           // 构建完整的 analysis 对象
           try {
-            const analysis = self.buildAnalysisObject(result, keypoints, mindmap, chapters);
+            const analysis = self.buildAnalysisObject(result, keypoints, mindmap);
 
             // 更新所有分析数据
             self.setData({
@@ -806,9 +728,6 @@ Page({
               chapters: chapters,
               mindmap: mindmap,
             });
-
-            console.log('[SUCCESS] 已更新分析结果数据');
-            console.log('keypoints:', keypoints.length, 'chapters:', chapters.length);
           } catch (e) {
             console.error('[ERROR] 构建分析对象失败:', e);
           }
@@ -825,23 +744,17 @@ Page({
 
         const terminalStates = ['completed', 'failed', 'error'];
         if (terminalStates.includes(result.status)) {
-          console.log('[INFO] 任务已完成/失败，停止轮询');
           self.cleanupInterval();
           // 再加载一次确保获取最新的完整数据
           setTimeout(() => {
-            console.log('[INFO] 任务完成后重新加载完整数据');
             self.loadTaskDetails();
           }, 500);
         }
 
       } catch (error) {
         console.error('[ERROR] 获取进度失败:', error);
-        console.error('错误详情:', error.message || error);
       }
     }, 2000);
-
-    console.log('[SUCCESS] 定时器已创建:', this.progressInterval);
-    console.log('========== 启动进度跟踪结束 ==========');
   },
 
   // 复制结果
@@ -1003,9 +916,7 @@ Page({
     const targetGroupId = groupId === 'ungrouped' ? null : groupId;
 
     try {
-      console.log('[onSelectGroup] 开始更新分组，groupId:', groupId, 'targetGroupId:', targetGroupId);
       await historyApi.updateGroup(this.data.taskId, targetGroupId);
-      console.log('[onSelectGroup] updateGroup 成功');
 
       // 更新当前分析的分组信息
       let groupName = '未分组';
@@ -1013,7 +924,6 @@ Page({
         const group = this.data.groups.find(g => g.id === targetGroupId);
         if (group) {
           groupName = group.name;
-          console.log('[onSelectGroup] 找到分组:', groupName);
         }
       }
 
@@ -1023,13 +933,10 @@ Page({
         'analysis.group_name': groupName,
         showGroupSheet: false,
       });
-      console.log('[onSelectGroup] UI 已更新');
 
       // 等待500ms后重新加载任务详情，确保后端数据已更新
       await new Promise(resolve => setTimeout(resolve, 500));
-      console.log('[onSelectGroup] 开始重新加载任务详情');
       await this.loadTaskDetails();
-      console.log('[onSelectGroup] 任务详情已重新加载');
 
       wx.showToast({ title: '已更新分组', icon: 'success' });
     } catch (error) {
