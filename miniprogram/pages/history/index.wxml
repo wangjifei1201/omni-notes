@@ -4,7 +4,9 @@
   <view class="nav-header">
     <view class="nav-left"></view>
     <text class="page-title">分析历史</text>
-    <view class="nav-right"></view>
+    <view class="nav-right" bindtap="onOpenGroupManager">
+      <text class="manage-btn">⚙</text>
+    </view>
   </view>
 
   <!-- 搜索栏 -->
@@ -25,6 +27,40 @@
     </view>
   </view>
 
+  <!-- 分组标签栏 -->
+  <view class="group-tabs">
+    <scroll-view class="tabs-scroll" scroll-x="true" enhanced="true" show-scrollbar="false">
+      <view class="tabs-list">
+        <view
+          class="tab-item {{selectedGroupId === 'all' ? 'active' : ''}}"
+          data-group-id="all"
+          bindtap="onGroupChange"
+        >
+          <text class="tab-name">全部</text>
+          <text class="tab-count" wx:if="{{totalCount > 0}}">{{totalCount}}</text>
+        </view>
+        <view
+          class="tab-item {{selectedGroupId === 'ungrouped' ? 'active' : ''}}"
+          data-group-id="ungrouped"
+          bindtap="onGroupChange"
+        >
+          <text class="tab-name">未分组</text>
+          <text class="tab-count" wx:if="{{ungroupedCount > 0}}">{{ungroupedCount}}</text>
+        </view>
+        <block wx:for="{{groups}}" wx:key="id">
+          <view
+            class="tab-item {{selectedGroupId === item.id ? 'active' : ''}}"
+            data-group-id="{{item.id}}"
+            bindtap="onGroupChange"
+          >
+            <text class="tab-name">{{item.name}}</text>
+            <text class="tab-count" wx:if="{{item.video_count > 0}}">{{item.video_count}}</text>
+          </view>
+        </block>
+      </view>
+    </scroll-view>
+  </view>
+
   <!-- 内容区 -->
   <scroll-view class="content-area" scroll-y="true" enhanced="true" show-scrollbar="false">
     <!-- 历史列表 -->
@@ -39,14 +75,12 @@
       >
         <!-- 左侧内容区 -->
         <view class="card-content">
-          <!-- 第一行：标题 -->
-          <view class="card-title-row">
-            <text class="card-title">{{item.title || '未命名视频'}}</text>
-          </view>
+          <!-- 标题 -->
+          <text class="card-title">{{item.title || '未命名视频'}}</text>
 
-          <!-- 第二行：要点列表 -->
-          <view class="card-keypoints-row">
-            <view class="keypoints-content" wx:if="{{item.key_points && item.key_points.length > 0}}">
+          <!-- 要点列表 -->
+          <view class="card-keypoints-row" wx:if="{{item.key_points && item.key_points.length > 0}}">
+            <view class="keypoints-content">
               <view class="keypoint-item" wx:for="{{item.key_points}}" wx:for-item="point" wx:key="index" wx:if="{{index < 3}}">
                 <text class="keypoint-number">{{index + 1}}</text>
                 <text class="keypoint-text">{{point.point}}</text>
@@ -54,50 +88,29 @@
             </view>
           </view>
 
-          <!-- 第三行：视频元信息（作者 · 出处 · 时间） -->
+          <!-- 元信息 -->
           <view class="card-meta-row">
-            <view class="meta-content">
-              <text class="meta-text">{{item.author || '未知作者'}}</text>
-              <text class="meta-sep">·</text>
-              <text class="meta-platform {{item.platform}}">{{item.platform === 'bilibili' ? 'B站' : '抖音'}}</text>
-              <text class="meta-sep">·</text>
-              <text class="meta-time">{{item.created_at}}</text>
-            </view>
+            <text class="meta-text">{{item.author || '未知作者'}}</text>
+            <text class="meta-sep">·</text>
+            <text class="meta-platform {{item.platform}}">{{item.platform === 'bilibili' ? 'B站' : '抖音'}}</text>
+            <text class="meta-sep">·</text>
+            <text class="meta-time">{{item.created_at}}</text>
           </view>
         </view>
 
-        <!-- 右侧操作栏 -->
-        <view class="card-actions-bar">
-          <!-- 收藏按钮 -->
-          <button
-            class="card-favorite-btn {{item.is_favorite ? 'active' : ''}}"
-            data-history-id="{{item.id}}"
-            data-is-favorite="{{item.is_favorite}}"
-            catchtap="onToggleFavorite"
-          >
-            <text class="favorite-icon">{{item.is_favorite ? '★' : '☆'}}</text>
-          </button>
-
-          <!-- 状态标签 -->
+        <!-- 右侧状态 -->
+        <view class="card-status">
           <view class="status-badge {{item.status}}">
             <text class="status-icon">{{item.status === 'completed' ? '✓' : item.status === 'failed' ? '✕' : '⟳'}}</text>
             <text class="status-text">{{item.status === 'completed' ? '已完成' : item.status === 'failed' ? '失败' : '进行中'}}</text>
           </view>
-
-          <!-- 更多按钮 -->
-          <button class="card-more-btn" data-id="{{item.id}}" catchtap="onShowActions">
-            <text class="more-icon">···</text>
-          </button>
         </view>
       </view>
     </view>
 
     <!-- 空状态 -->
     <view class="empty-state" wx:if="{{filteredHistory.length === 0}}">
-      <view class="empty-icon-wrap">
-        <view class="empty-glow"></view>
-        <text class="empty-icon">◷</text>
-      </view>
+      <text class="empty-icon">◷</text>
       <text class="empty-title">暂无记录</text>
       <text class="empty-desc">{{searchKeyword ? '没有找到匹配的结果' : '开始分析视频，记录将显示在这里'}}</text>
       <button class="empty-action" bindtap="onGoAnalyze" wx:if="{{!searchKeyword}}">
@@ -105,23 +118,6 @@
       </button>
     </view>
   </scroll-view>
-
-  <!-- 底部操作栏 -->
-  <view class="bottom-bar" wx:if="{{selectedItems.length > 0}}">
-    <view class="selection-info">
-      <text class="selection-count">已选择 {{selectedItems.length}} 项</text>
-    </view>
-    <view class="selection-actions">
-      <button class="action-btn" bindtap="onBatchFavorite">
-        <text class="action-icon">★</text>
-        <text>收藏</text>
-      </button>
-      <button class="action-btn delete" bindtap="onBatchDelete">
-        <text class="action-icon">◉</text>
-        <text>删除</text>
-      </button>
-    </view>
-  </view>
 
   <!-- 操作菜单 -->
   <view class="action-sheet" wx:if="{{showActionSheet}}">
@@ -135,13 +131,9 @@
           <text class="btn-icon">◈</text>
           <text class="btn-text">查看详情</text>
         </button>
-        <button class="sheet-btn" bindtap="onShare">
-          <text class="btn-icon">◉</text>
-          <text class="btn-text">分享</text>
-        </button>
-        <button class="sheet-btn" bindtap="onToggleFavoriteItem">
-          <text class="btn-icon">★</text>
-          <text class="btn-text">{{currentItem.is_favorite ? '取消收藏' : '收藏'}}</text>
+        <button class="sheet-btn" bindtap="onMoveToGroup">
+          <text class="btn-icon">📁</text>
+          <text class="btn-text">移动到分组</text>
         </button>
         <button class="sheet-btn delete" bindtap="onDeleteItem">
           <text class="btn-icon">◉</text>
@@ -149,6 +141,95 @@
         </button>
       </view>
       <button class="sheet-cancel" bindtap="onCloseActionSheet">取消</button>
+    </view>
+  </view>
+
+  <!-- 分组选择面板 -->
+  <view class="action-sheet" wx:if="{{showGroupPicker}}">
+    <view class="sheet-backdrop" bindtap="onCloseGroupPicker"></view>
+    <view class="sheet-content">
+      <view class="sheet-header">
+        <text class="sheet-title">移动到分组</text>
+      </view>
+      <view class="group-picker-list">
+        <view
+          class="group-picker-item"
+          wx:for="{{groups}}"
+          wx:key="id"
+          data-group-id="{{item.id}}"
+          bindtap="onConfirmMoveToGroup"
+        >
+          <text class="picker-icon">📁</text>
+          <text class="picker-name">{{item.name}}</text>
+          <text class="picker-count">{{item.video_count || 0}} 个视频</text>
+        </view>
+        <view
+          class="group-picker-item"
+          data-group-id="ungrouped"
+          bindtap="onConfirmMoveToGroup"
+        >
+          <text class="picker-icon">📋</text>
+          <text class="picker-name">未分组</text>
+        </view>
+      </view>
+      <button class="sheet-cancel" bindtap="onCloseGroupPicker">取消</button>
+    </view>
+  </view>
+
+  <!-- 分组管理面板 -->
+  <view class="action-sheet" wx:if="{{showGroupManager}}">
+    <view class="sheet-backdrop" bindtap="onCloseGroupManager"></view>
+    <view class="sheet-content group-manager-sheet">
+      <view class="sheet-header">
+        <text class="sheet-title">管理分组</text>
+      </view>
+      <view class="group-manager-list">
+        <view class="group-manager-item" wx:for="{{groups}}" wx:key="id">
+          <view class="manager-info">
+            <text class="manager-name">{{item.name}}</text>
+            <text class="manager-count">{{item.video_count || 0}} 个视频</text>
+          </view>
+          <view class="manager-actions">
+            <button class="manager-btn" data-group-id="{{item.id}}" bindtap="onEditGroup">编辑</button>
+            <button class="manager-btn delete" data-group-id="{{item.id}}" bindtap="onDeleteGroupConfirm">删除</button>
+          </view>
+        </view>
+        <view class="group-manager-item empty" wx:if="{{groups.length === 0}}">
+          <text class="empty-tip">暂无分组</text>
+        </view>
+      </view>
+      <view class="manager-footer">
+        <button class="btn-create-group" bindtap="onShowAddGroupModal">
+          <text class="btn-icon">+</text>
+          <text>新建分组</text>
+        </button>
+      </view>
+      <button class="sheet-cancel" bindtap="onCloseGroupManager">关闭</button>
+    </view>
+  </view>
+
+  <!-- 新建分组弹窗 -->
+  <view class="modal" wx:if="{{showAddGroupModal}}">
+    <view class="modal-backdrop" bindtap="onCloseAddGroupModal"></view>
+    <view class="modal-content">
+      <view class="modal-header">
+        <text class="modal-title">{{editingGroupId ? '编辑分组' : '新建分组'}}</text>
+        <button class="modal-close" bindtap="onCloseAddGroupModal"><text>✕</text></button>
+      </view>
+      <view class="form-group">
+        <text class="form-label">分组名称</text>
+        <input
+          class="form-input"
+          type="text"
+          placeholder="请输入分组名称"
+          value="{{groupFormData.name}}"
+          bindinput="onGroupNameInput"
+        />
+      </view>
+      <view class="modal-actions">
+        <button class="btn btn-secondary" bindtap="onCloseAddGroupModal">取消</button>
+        <button class="btn btn-primary" bindtap="onSaveGroup">保存</button>
+      </view>
     </view>
   </view>
 </view>
