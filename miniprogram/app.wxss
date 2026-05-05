@@ -43,6 +43,11 @@ page {
   --glass-border: rgba(255, 255, 255, 0.8);
   --glass-blur: blur(20px);
 
+  /* 圆角 */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
   /* TabBar 颜色 */
   --tab-bar-bg: #ffffff;
   --tab-bar-color: #8b8b9e;
@@ -288,6 +293,13 @@ input, textarea {
 .btn-primary:active {
   transform: scale(0.98);
   box-shadow: 0 2px 8px rgba(124, 58, 237, 0.2);
+}
+
+.btn-primary.disabled {
+  background: linear-gradient(135deg, #b8b4bf 0%, #c9c5cf 100%);
+  color: rgba(255, 255, 255, 0.6);
+  box-shadow: none;
+  cursor: not-allowed;
 }
 
 .btn-secondary {
