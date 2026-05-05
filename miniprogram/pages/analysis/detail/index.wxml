@@ -1,16 +1,23 @@
 <!--pages/analysis/detail/index.wxml - 分析详情页-->
 <view class="page-container">
-  <!-- 顶部导航 -->
+  <!-- 顶部导航（无返回按钮，使用原生返回） -->
   <view class="nav-header">
     <view class="nav-left"></view>
     <text class="page-title">分析详情</text>
-    <button class="more-btn" bindtap="onShowActions">
-      <text class="more-icon">◈</text>
-    </button>
+    <view class="nav-right"></view>
   </view>
 
   <!-- 内容区 -->
   <scroll-view class="content-area" scroll-y="true" enhanced="true" show-scrollbar="false">
+
+    <!-- 品牌头部 -->
+    <view class="brand-header">
+      <view class="brand-logo">O</view>
+      <view class="brand-info">
+        <text class="brand-name">Omni-Notes</text>
+        <text class="brand-slogan">AI 视频笔记</text>
+      </view>
+    </view>
 
     <!-- 分析中状态展示 -->
     <view class="processing-section" wx:if="{{task && task.status !== 'completed' && task.status !== 'failed'}}">
@@ -137,31 +144,47 @@
       </view>
     </view>
 
-    <!-- 分析完成/进行中状态 - 视频信息卡片 -->
-    <view class="video-card" wx:if="{{task && (task.status === 'completed' || task.status === 'running' || task.status === 'queued')}}">
-      <view class="video-thumb">
-        <image class="thumb-image" src="{{analysis.video.thumbnail || '/images/default-thumb.png'}}" mode="aspectFill" />
-        <view class="platform-badge {{analysis.video.platform}}">
-          <text>{{analysis.video.platform === 'bilibili' ? 'B站' : '抖音'}}</text>
-        </view>
-        <view class="play-overlay" wx:if="{{analysis.video.url}}" bindtap="onPlayVideo">
-          <view class="play-btn">
-            <text class="play-icon">▶</text>
+    <!-- 分析完成/进行中状态 - 视频卡片（可左滑） -->
+    <view class="video-card-wrapper" wx:if="{{task && (task.status === 'completed' || task.status === 'running' || task.status === 'queued')}}">
+      <view class="video-card {{swipeClass}}" bindtouchstart="onTouchStart" bindtouchmove="onTouchMove" bindtouchend="onTouchEnd">
+        <view class="card-content">
+          <!-- 缩略图 -->
+          <view class="video-thumb">
+            <image class="thumb-image" src="{{analysis.video.thumbnail || '/images/default-thumb.png'}}" mode="aspectFill" />
+            <view class="platform-badge {{analysis.video.platform}}">
+              <text>{{analysis.video.platform === 'bilibili' ? 'B站' : '抖音'}}</text>
+            </view>
+            <view class="play-overlay" wx:if="{{analysis.video.url}}" bindtap="onPlayVideo">
+              <view class="play-btn">
+                <text class="play-icon">▶</text>
+              </view>
+            </view>
+          </view>
+          <!-- 视频信息 -->
+          <view class="video-info">
+            <text class="video-title">{{analysis.video.title || '未命名视频'}}</text>
+            <view class="video-meta">
+              <text class="meta-author" wx:if="{{analysis.video.author}}">{{analysis.video.author}}</text>
+              <text class="meta-dot" wx:if="{{analysis.video.author}}">•</text>
+              <text class="meta-time">{{analysis.created_at}}</text>
+            </view>
           </view>
         </view>
-      </view>
-      <view class="video-info">
-        <text class="video-title">{{analysis.video.title || '未命名视频'}}</text>
-        <view class="video-meta">
-          <text class="meta-author" wx:if="{{analysis.video.author}}">{{analysis.video.author}}</text>
-          <text class="meta-dot" wx:if="{{analysis.video.author}}">•</text>
-          <text class="meta-time">{{analysis.created_at}}</text>
+        <!-- 左滑操作按钮（重新分析、删除） -->
+        <view class="swipe-actions">
+          <view class="swipe-btn reanalysis" bindtap="onReanalyze">
+            <text>重新分析</text>
+          </view>
+          <view class="swipe-btn delete" bindtap="onDelete">
+            <text>删除</text>
+          </view>
         </view>
       </view>
     </view>
 
-    <!-- 标签切换（分析进行中或完成后显示分析结果） -->
-    <view class="tabs-section" wx:if="{{task && (task.status === 'completed' || task.status === 'running' || task.status === 'queued') && (analysis.summary || analysis.keypoints.length > 0 || analysis.mindmap || analysis.transcript)}}">
+    <!-- Tab 内容区（分析完成后显示） -->
+    <view class="tabs-section" wx:if="{{task && task.status === 'completed'}}">
+      <!-- Tab头部：摘要、要点（含数量角标）、导图、字幕 -->
       <view class="tabs-header">
         <view
           class="tab-item {{activeTab === 'summary' ? 'active' : ''}}"
@@ -310,73 +333,90 @@
     <view class="bottom-spacer"></view>
   </scroll-view>
 
-  <!-- 底部操作栏（分析完成后显示） -->
+  <!-- 底部操作栏（分析完成后显示）- 分组版 -->
   <view class="bottom-bar" wx:if="{{task && task.status === 'completed'}}">
-    <button class="action-btn secondary" bindtap="onToggleFavorite">
-      <text class="btn-icon">{{analysis.is_favorite ? '★' : '☆'}}</text>
-      <text class="btn-text">{{analysis.is_favorite ? '已收藏' : '收藏'}}</text>
-    </button>
-    <button class="action-btn secondary" bindtap="onShare">
-      <text class="btn-icon">◉</text>
-      <text class="btn-text">分享</text>
-    </button>
-    <button class="action-btn primary" bindtap="onExport">
-      <text class="btn-icon">◊</text>
-      <text class="btn-text">导出</text>
+    <view class="group-info" bindtap="onShowGroupPicker">
+      <text class="group-icon">📁</text>
+      <text class="group-name">{{analysis.group_name || '未分组'}}</text>
+      <text class="group-arrow">›</text>
+    </view>
+    <button class="action-btn primary" bindtap="onShowGroupPicker">
+      <text class="btn-icon">◈</text>
+      <text class="btn-text">{{analysis.group_id ? '切换分组' : '添加分组'}}</text>
     </button>
   </view>
 
-  <!-- 操作菜单 -->
-  <view class="action-sheet" wx:if="{{showActionSheet}}">
-    <view class="sheet-backdrop" bindtap="onCloseActionSheet"></view>
+  <!-- 分组选择面板 -->
+  <view class="action-sheet" wx:if="{{showGroupSheet}}">
+    <view class="sheet-backdrop" bindtap="onCloseGroupSheet"></view>
     <view class="sheet-content">
       <view class="sheet-header">
-        <text class="sheet-title">更多操作</text>
+        <text class="sheet-title">选择分组</text>
       </view>
       <view class="sheet-actions">
-        <button class="sheet-btn" bindtap="onAddToGroup">
-          <text class="btn-icon">◈</text>
-          <text class="btn-text">添加到分组</text>
-        </button>
-        <button class="sheet-btn" bindtap="onReanalyze">
-          <text class="btn-icon">◉</text>
-          <text class="btn-text">重新分析</text>
-        </button>
-        <button class="sheet-btn" bindtap="onDownload">
-          <text class="btn-icon">◊</text>
-          <text class="btn-text">下载结果</text>
-        </button>
-        <button class="sheet-btn delete" bindtap="onDelete">
-          <text class="btn-icon">◉</text>
-          <text class="btn-text">删除记录</text>
-        </button>
+        <view
+          class="group-item {{analysis.group_id === item.id ? 'active' : ''}}"
+          wx:for="{{groups}}"
+          wx:key="id"
+          data-group-id="{{item.id}}"
+          bindtap="onSelectGroup"
+        >
+          <text class="group-item-icon">📁</text>
+          <text class="group-item-name">{{item.name}}</text>
+          <text class="group-item-check" wx:if="{{analysis.group_id === item.id}}">✓</text>
+        </view>
+        <view
+          class="group-item {{!analysis.group_id ? 'active' : ''}}"
+          data-group-id="ungrouped"
+          bindtap="onSelectGroup"
+        >
+          <text class="group-item-icon">📋</text>
+          <text class="group-item-name">未分组</text>
+          <text class="group-item-check" wx:if="{{!analysis.group_id}}">✓</text>
+        </view>
       </view>
-      <button class="sheet-cancel" bindtap="onCloseActionSheet">取消</button>
+      <button class="sheet-btn create-group" bindtap="onCreateGroup">
+        <text class="btn-icon">+</text>
+        <text class="btn-text">新建分组</text>
+      </button>
+      <button class="sheet-cancel" bindtap="onCloseGroupSheet">取消</button>
     </view>
   </view>
 
-  <!-- 导出选项 -->
-  <view class="action-sheet" wx:if="{{showExportSheet}}">
-    <view class="sheet-backdrop" bindtap="onCloseExportSheet"></view>
-    <view class="sheet-content">
-      <view class="sheet-header">
-        <text class="sheet-title">导出格式</text>
-      </view>
-      <view class="sheet-actions">
-        <button class="sheet-btn" bindtap="onExportMarkdown">
-          <text class="btn-icon">◊</text>
-          <text class="btn-text">Markdown</text>
-        </button>
-        <button class="sheet-btn" bindtap="onExportText">
-          <text class="btn-icon">◉</text>
-          <text class="btn-text">纯文本</text>
-        </button>
-        <button class="sheet-btn" bindtap="onExportPDF">
-          <text class="btn-icon">◈</text>
-          <text class="btn-text">PDF</text>
+  <!-- 新建分组弹窗 -->
+  <view class="modal" wx:if="{{showCreateGroupModal}}">
+    <view class="modal-backdrop" bindtap="onCloseCreateGroupModal"></view>
+    <view class="modal-content">
+      <view class="modal-header">
+        <text class="modal-title">新建分组</text>
+        <button class="modal-close" bindtap="onCloseCreateGroupModal">
+          <text>✕</text>
         </button>
       </view>
-      <button class="sheet-cancel" bindtap="onCloseExportSheet">取消</button>
+      <view class="form-group">
+        <text class="form-label">分组名称</text>
+        <input
+          class="form-input"
+          type="text"
+          placeholder="请输入分组名称"
+          value="{{createGroupForm.name}}"
+          bindinput="onCreateGroupNameInput"
+        />
+      </view>
+      <view class="form-group">
+        <text class="form-label">分组描述</text>
+        <input
+          class="form-input"
+          type="text"
+          placeholder="请输入分组描述（可选）"
+          value="{{createGroupForm.description}}"
+          bindinput="onCreateGroupDescInput"
+        />
+      </view>
+      <view class="modal-actions">
+        <button class="btn btn-secondary" bindtap="onCloseCreateGroupModal">取消</button>
+        <button class="btn btn-primary" bindtap="onSaveCreateGroup">保存</button>
+      </view>
     </view>
   </view>
 </view>

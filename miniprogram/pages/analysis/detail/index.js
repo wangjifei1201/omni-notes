@@ -1,5 +1,5 @@
 // pages/analysis/detail/index.js
-const { analysisApi } = require('../../../utils/api');
+const { analysisApi, historyApi, groupsApi } = require('../../../utils/api');
 const store = require('../../../utils/store');
 
 Page({
@@ -9,6 +9,11 @@ Page({
     result: null,
     isLoading: true,
     error: null,
+
+    // ===== 左滑操作相关 =====
+    swipeClass: '',
+    touchStartX: 0,
+    touchStartY: 0,
 
     // ===== wxml 模板所需的 analysis 对象 =====
     analysis: {
@@ -24,27 +29,17 @@ Page({
       keypoints: [],
       mindmap: '',
       transcript: null,
-      is_favorite: false,
+      group_id: null,
+      group_name: '',
     },
 
     // 标签页状态（默认显示摘要）
     activeTab: 'summary',
 
-    // 操作面板状态
-    showActionSheet: false,
-    showExportSheet: false,
-
     // 步骤状态
     currentStep: 'extract',
     elapsedTime: 0,
     overallProgress: 0,
-
-    steps: {
-      extract: { status: 'pending', label: '分析', startTime: null, endTime: null },
-      download: { status: 'pending', label: '下载', startTime: null, endTime: null },
-      transcribe: { status: 'pending', label: '语音转义', startTime: null, endTime: null },
-      analyze: { status: 'pending', label: '大模型分析', startTime: null, endTime: null },
-    },
 
     // 步骤完成状态（用于UI）
     stepStatus: {
@@ -63,8 +58,6 @@ Page({
     transcribeProgress: null,
 
     // 详细进度信息
-    downloadProgress: null,
-    transcribeProgress: null,
     currentMessage: '准备开始...',
 
     // 结果数据（保留扁平结构用于复制等操作）
@@ -73,6 +66,15 @@ Page({
     chapters: [],
     mindmap: '',
     fullAnalysis: '',
+
+    // 分组相关数据
+    groups: [],
+    showGroupSheet: false,
+    showCreateGroupModal: false,
+    createGroupForm: {
+      name: '',
+      description: '',
+    },
   },
 
   // 使用实例变量存储定时器，避免状态管理问题
@@ -115,12 +117,19 @@ Page({
       currentStepName: '准备开始...',
       downloadProgress: null,
       transcribeProgress: null,
+      // 左滑状态重置
+      swipeClass: '',
+      touchStartX: 0,
+      touchStartY: 0,
       // 初始化 task 对象用于 wxml 判断状态
       task: { taskId, status: 'pending', status_text: '准备中...' },
     });
 
     // 启动计时器
     this.startTimer();
+
+    // 加载分组列表
+    this.loadGroups();
 
     // 加载任务详情并启动进度跟踪
     console.log('[INIT] 开始加载任务详情');
@@ -172,14 +181,58 @@ Page({
     }
   },
 
+  // ===== 左滑操作相关方法 =====
+  onTouchStart(e) {
+    // 只在分析完成的卡片上响应滑动
+    if (!this.data.task || this.data.task.status !== 'completed') return;
+
+    const touch = e.touches[0];
+    this.setData({
+      touchStartX: touch.clientX,
+      touchStartY: touch.clientY,
+      swipeClass: 'swiping'
+    });
+  },
+
+  onTouchMove(e) {
+    // 只在分析完成的卡片上响应滑动
+    if (!this.data.task || this.data.task.status !== 'completed') return;
+
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - this.data.touchStartX;
+    const deltaY = Math.abs(touch.clientY - this.data.touchStartY);
+
+    // 横向滑动超过50px且纵向滑动小于20px时触发左滑
+    if (deltaX < -50 && deltaY < 20) {
+      this.setData({ swipeClass: 'swiped' });
+    } else if (deltaX > -50) {
+      this.setData({ swipeClass: '' });
+    }
+  },
+
+  onTouchEnd(e) {
+    // 只在分析完成的卡片上响应滑动
+    if (!this.data.task || this.data.task.status !== 'completed') return;
+
+    const deltaX = e.changedTouches[0].clientX - this.data.touchStartX;
+    const deltaY = Math.abs(e.changedTouches[0].clientY - this.data.touchStartY);
+
+    // 横向滑动超过50px且纵向滑动小于20px时保持左滑状态
+    if (deltaX < -50 && deltaY < 20) {
+      this.setData({ swipeClass: 'swiped' });
+    } else {
+      this.setData({ swipeClass: '' });
+    }
+  },
+
   // ===== 构建 analysis 对象（wxml 模板数据源） =====
   buildAnalysisObject(result, keypoints, mindmap, chapters) {
     const analysisResult = result.result || {};
-    
+
     // 解析视频信息（兼容多种 API 返回格式）
     const videoInfo = result.video || result.video_info || analysisResult.video || {};
     const videoUrl = result.url || result.video_url || videoInfo.url || '';
-    
+
     // 从 URL 推断平台
     let platform = videoInfo.platform || result.platform || '';
     if (!platform && videoUrl) {
@@ -189,7 +242,7 @@ Page({
         platform = 'douyin';
       }
     }
-    
+
     // 格式化创建时间
     let createdAt = result.created_at || result.createdAt || '';
     if (createdAt) {
@@ -240,7 +293,8 @@ Page({
       })),
       mindmap: mindmap,
       transcript: transcript,
-      is_favorite: result.is_favorite || false,
+      group_id: result.group_id || null,
+      group_name: result.group_name || '',
     };
   },
 
@@ -266,6 +320,7 @@ Page({
       console.log('当前步骤(result.current_step):', result.current_step);
       console.log('消息(result.message):', result.message);
       console.log('分析结果:', result.result);
+      console.log('分组信息 - group_id:', result.group_id, 'group_name:', result.group_name);
       console.log('================================================');
 
       // 获取任务状态（兼容多种字段名）
@@ -402,17 +457,17 @@ Page({
   // 格式化思维导图为 Markdown 有序列表格式
   formatMindmap(mindmapObj) {
     if (!mindmapObj) return '';
-    
+
     console.log('格式化思维导图，数据结构:', typeof mindmapObj);
-    
+
     try {
       if (typeof mindmapObj === 'string') {
         return mindmapObj;
       }
-      
+
       if (typeof mindmapObj === 'object') {
         let result = '';
-        
+
         if (mindmapObj.root) {
           result = this.formatMindmapToMarkdown(mindmapObj.root, 0);
         } else if (mindmapObj.centralTopic || mindmapObj.central_topic) {
@@ -428,20 +483,20 @@ Page({
             result += this.formatMindmapToMarkdown(child, 1, index + 1);
           });
         } else if (mindmapObj.nodes && Array.isArray(mindmapObj.nodes)) {
-          result = mindmapObj.nodes.map((node, index) => 
+          result = mindmapObj.nodes.map((node, index) =>
             this.formatMindmapToMarkdown(node, 0, index + 1)
           ).join('\n');
         } else if (Array.isArray(mindmapObj)) {
-          result = mindmapObj.map((node, index) => 
+          result = mindmapObj.map((node, index) =>
             this.formatMindmapToMarkdown(node, 0, index + 1)
           ).join('\n');
         } else {
           result = this.formatObjectToMarkdown(mindmapObj, 0, 1);
         }
-        
+
         return result;
       }
-      
+
       return String(mindmapObj);
     } catch (e) {
       console.error('格式化思维导图失败:', e);
@@ -452,51 +507,51 @@ Page({
   // 格式化思维导图为 Markdown 有序列表
   formatMindmapToMarkdown(node, level, parentNumber = 1) {
     if (!node) return '';
-    
+
     let text = '';
     if (typeof node === 'string') {
       text = node;
     } else if (typeof node === 'object') {
-      text = node.text || node.title || node.name || node.label || node.topic 
+      text = node.text || node.title || node.name || node.label || node.topic
           || node.content || node.idea || node.subject || '节点';
     } else {
       text = String(node);
     }
-    
+
     const indent = '   '.repeat(level);
     let result = `${indent}${parentNumber}. ${text}\n`;
-    
+
     const childrenFields = ['children', 'nodes', 'items', 'branches', 'topics', 'subtopics', 'subNodes'];
     let children = null;
-    
+
     for (const field of childrenFields) {
       if (node[field] && Array.isArray(node[field])) {
         children = node[field];
         break;
       }
     }
-    
+
     if (children && Array.isArray(children)) {
       children.forEach((child, index) => {
         const childNumber = level === 0 ? index + 1 : `${parentNumber}.${index + 1}`;
         result += this.formatMindmapToMarkdown(child, level + 1, childNumber);
       });
     }
-    
+
     return result;
   },
 
   // 将对象转换为 Markdown 有序列表（用于无法识别的结构）
   formatObjectToMarkdown(obj, level, number) {
     if (!obj || typeof obj !== 'object') return `${number}. ${String(obj)}\n`;
-    
+
     const indent = '   '.repeat(level);
     let result = '';
-    
+
     if (Array.isArray(obj)) {
       obj.forEach((item, index) => {
         const itemNumber = `${number}.${index + 1}`;
-        result += `${indent}${itemNumber}. ${typeof item === 'object' ? 
+        result += `${indent}${itemNumber}. ${typeof item === 'object' ?
           this.formatObjectToMarkdown(item, level + 1, itemNumber) : String(item)}\n`;
       });
     } else {
@@ -510,7 +565,7 @@ Page({
         }
       });
     }
-    
+
     return result;
   },
 
@@ -792,7 +847,7 @@ Page({
   // 复制结果
   onCopyResult(e) {
     const { field } = e.currentTarget.dataset;
-    
+
     let text = '';
     if (field === 'summary') {
       text = this.data.summary || this.data.analysis.summary;
@@ -827,7 +882,7 @@ Page({
     } else if (field === 'fullAnalysis') {
       text = this.data.fullAnalysis;
     }
-    
+
     if (!text) {
       wx.showToast({
         title: '没有内容可复制',
@@ -835,7 +890,7 @@ Page({
       });
       return;
     }
-    
+
     wx.setClipboardData({
       data: text,
       success: () => {
@@ -853,36 +908,15 @@ Page({
     });
   },
 
-  // 返回首页
-  onBackToHome() {
-    wx.navigateBack({
-      delta: 1,
-    });
-  },
-
   // 重新分析
   onRetry() {
     this.setData({
       isLoading: true,
       error: null,
       overallProgress: 0,
+      swipeClass: '' // 重置左滑状态
     });
     this.loadTaskDetails();
-  },
-
-  // 返回上一页
-  onGoBack() {
-    wx.navigateBack();
-  },
-
-  // 显示更多操作菜单
-  onShowActions() {
-    this.setData({ showActionSheet: true });
-  },
-
-  // 关闭操作菜单
-  onCloseActionSheet() {
-    this.setData({ showActionSheet: false });
   },
 
   // 标签页切换
@@ -917,10 +951,10 @@ Page({
   onCopyTranscript() {
     const transcript = this.data.analysis.transcript;
     if (transcript && transcript.segments) {
-      const text = transcript.segments.map(seg => 
+      const text = transcript.segments.map(seg =>
         `[${seg.start_time || ''}] ${seg.text || ''}`
       ).join('\n');
-      
+
       if (text) {
         wx.setClipboardData({
           data: text,
@@ -940,83 +974,132 @@ Page({
     wx.showToast({ title: `跳转到 ${time}`, icon: 'none' });
   },
 
-  // 切换收藏
-  onToggleFavorite() {
-    const isFav = this.data.analysis.is_favorite;
+  // ===== 分组相关操作 =====
+  // 加载分组列表
+  async loadGroups() {
+    try {
+      const groups = await groupsApi.getList();
+      this.setData({ groups: groups || [] });
+    } catch (error) {
+      console.error('[ERROR] 加载分组失败:', error);
+      this.setData({ groups: [] });
+    }
+  },
+
+  // 显示分组选择面板
+  onShowGroupPicker() {
+    this.loadGroups();
+    this.setData({ showGroupSheet: true });
+  },
+
+  // 关闭分组选择面板
+  onCloseGroupSheet() {
+    this.setData({ showGroupSheet: false, showCreateGroupModal: false });
+  },
+
+  // 选择分组
+  async onSelectGroup(e) {
+    const groupId = e.currentTarget.dataset.groupId;
+    const targetGroupId = groupId === 'ungrouped' ? null : groupId;
+
+    try {
+      console.log('[onSelectGroup] 开始更新分组，groupId:', groupId, 'targetGroupId:', targetGroupId);
+      await historyApi.updateGroup(this.data.taskId, targetGroupId);
+      console.log('[onSelectGroup] updateGroup 成功');
+
+      // 更新当前分析的分组信息
+      let groupName = '未分组';
+      if (targetGroupId) {
+        const group = this.data.groups.find(g => g.id === targetGroupId);
+        if (group) {
+          groupName = group.name;
+          console.log('[onSelectGroup] 找到分组:', groupName);
+        }
+      }
+
+      // 先更新UI
+      this.setData({
+        'analysis.group_id': targetGroupId,
+        'analysis.group_name': groupName,
+        showGroupSheet: false,
+      });
+      console.log('[onSelectGroup] UI 已更新');
+
+      // 等待500ms后重新加载任务详情，确保后端数据已更新
+      await new Promise(resolve => setTimeout(resolve, 500));
+      console.log('[onSelectGroup] 开始重新加载任务详情');
+      await this.loadTaskDetails();
+      console.log('[onSelectGroup] 任务详情已重新加载');
+
+      wx.showToast({ title: '已更新分组', icon: 'success' });
+    } catch (error) {
+      console.error('[ERROR onSelectGroup]:', error);
+      wx.showToast({ title: error.message || '更新分组失败', icon: 'error' });
+    }
+  },
+
+  // 显示新建分组弹窗
+  onCreateGroup() {
     this.setData({
-      'analysis.is_favorite': !isFav,
-    });
-    wx.showToast({ 
-      title: !isFav ? '已收藏' : '已取消收藏', 
-      icon: 'success' 
+      showCreateGroupModal: true,
+      createGroupForm: { name: '', description: '' },
     });
   },
 
-  // 分享
-  onShare() {
-    wx.showShareMenu({
-      withShareTicket: true,
-      menus: ['shareAppMessage', 'shareTimeline'],
-    });
+  // 关闭新建分组弹窗
+  onCloseCreateGroupModal() {
+    this.setData({ showCreateGroupModal: false });
   },
 
-  // 分享消息
-  onShareAppMessage() {
-    return {
-      title: this.data.analysis.video.title || 'Omni-Notes 分析结果',
-      path: `/pages/analysis/detail/index?taskId=${this.data.taskId}`,
-    };
+  // 新建分组名称输入
+  onCreateGroupNameInput(e) {
+    this.setData({ 'createGroupForm.name': e.detail.value });
   },
 
-  // 导出
-  onExport() {
-    this.setData({ showExportSheet: true });
+  // 新建分组描述输入
+  onCreateGroupDescInput(e) {
+    this.setData({ 'createGroupForm.description': e.detail.value });
   },
 
-  // 关闭导出面板
-  onCloseExportSheet() {
-    this.setData({ showExportSheet: false });
+  // 保存新建分组
+  async onSaveCreateGroup() {
+    const { name, description } = this.data.createGroupForm;
+    if (!name.trim()) {
+      wx.showToast({ title: '请输入分组名称', icon: 'none' });
+      return;
+    }
+
+    try {
+      const result = await groupsApi.create(name, description);
+      wx.showToast({ title: '分组已创建', icon: 'success' });
+
+      // 刷新分组列表
+      await this.loadGroups();
+
+      // 将当前分析添加到新分组
+      if (result && result.id) {
+        await historyApi.updateGroup(this.data.taskId, result.id);
+        this.setData({
+          'analysis.group_id': result.id,
+          'analysis.group_name': name,
+        });
+      }
+
+      this.setData({ showCreateGroupModal: false, showGroupSheet: false });
+    } catch (error) {
+      wx.showToast({ title: error.message || '创建分组失败', icon: 'error' });
+    }
   },
 
-  // 导出 Markdown
-  onExportMarkdown() {
-    this.onCopyResult({ currentTarget: { dataset: { field: 'fullAnalysis' } } });
-    this.setData({ showExportSheet: false });
-  },
-
-  // 导出纯文本
-  onExportText() {
-    this.onCopyResult({ currentTarget: { dataset: { field: 'summary' } } });
-    this.setData({ showExportSheet: false });
-  },
-
-  // 导出 PDF（提示）
-  onExportPDF() {
-    wx.showToast({ title: 'PDF导出功能开发中', icon: 'none' });
-    this.setData({ showExportSheet: false });
-  },
-
-  // 添加到分组
-  onAddToGroup() {
-    this.setData({ showActionSheet: false });
-    wx.navigateTo({ url: '/pages/groups/index' });
-  },
-
-  // 重新分析
+  // 重新分析（从左滑操作触发）
   onReanalyze() {
-    this.setData({ showActionSheet: false });
+    this.setData({ swipeClass: '' }); // 重置左滑状态
     this.onRetry();
-  },
-
-  // 下载结果
-  onDownload() {
-    this.setData({ showActionSheet: false });
-    wx.showToast({ title: '下载功能开发中', icon: 'none' });
   },
 
   // 删除记录
   onDelete() {
-    this.setData({ showActionSheet: false });
+    this.setData({ swipeClass: '' }); // 重置左滑状态
     wx.showModal({
       title: '删除记录',
       content: '确定要删除此分析记录吗？',
