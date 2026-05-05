@@ -90,7 +90,8 @@
       "Bash(claude plugins:*)",
       "Bash(git:*)",
       "Bash(lsof -ti:3001)",
-      "Bash(xargs kill:*)"
+      "Bash(xargs kill:*)",
+      "Bash(grep -v \".md$\")"
     ]
   }
 }
