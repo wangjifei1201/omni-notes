@@ -22,7 +22,6 @@ Page({
   checkLoginStatus() {
     const userId = wx.getStorageSync('user_id');
     const isLoggedIn = !!userId;
-    const state = store.getState();
     this.setData({
       isLoggedIn,
       showAuthModal: !isLoggedIn,
