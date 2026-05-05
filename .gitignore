@@ -28,3 +28,4 @@ config.json
 # Tool configs (auto-managed)
 .gstack/
 .kilo/
+backend/app/routers/__pycache__/groups.cpython-311.pyc

@@ -175,7 +175,7 @@ const analysisApi = {
 
   // 获取分析进度
   getProgress: (taskId) => {
-    return request('GET', `/analysis/${taskId}/progress`);
+    return request('GET', `/analysis/${taskId}/status`);
   },
 
   // 获取分析结果

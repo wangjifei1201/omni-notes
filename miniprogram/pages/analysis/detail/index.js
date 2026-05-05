@@ -81,6 +81,7 @@ Page({
   progressInterval: null,
   timerInterval: null,
   currentTaskId: null,
+  _taskStartTime: null,  // 任务开始时间戳，用于计算总耗时
 
   onLoad(options) {
     const { taskId } = options;
@@ -122,9 +123,6 @@ Page({
       task: { taskId, status: 'pending', status_text: '准备中...' },
     });
 
-    // 启动计时器
-    this.startTimer();
-
     // 加载分组列表
     this.loadGroups();
 
@@ -133,6 +131,7 @@ Page({
   },
 
   onShow() {
+    // 如果任务在运行中但没有轮询，重新启动轮询
     // 如果任务在运行中但没有轮询，重新启动轮询
     if (this.currentTaskId && this.data.task && (this.data.task.status === 'running' || this.data.task.status === 'queued' || this.data.task.status === 'processing')) {
       if (!this.progressInterval) {
@@ -535,9 +534,17 @@ Page({
     let currentStep = 'extract';
     let currentMessage = result.message || '准备开始...';
     let stepStatus = { extract: 'pending', download: 'pending', transcribe: 'pending', analyze: 'pending' };
+    let downloadProgress = null;
+    let transcribeProgress = null;
 
     // 获取任务状态（兼容多种字段名）
     const taskStatus = result.status || result.state || 'pending';
+
+    // 如果任务开始执行，启动计时器
+    if ((taskStatus === 'running' || taskStatus === 'processing') && !this.timerInterval) {
+      this._taskStartTime = Date.now();
+      this.startTimer();
+    }
 
     // 计算步骤名称
     const stepNames = {
@@ -547,8 +554,18 @@ Page({
       analyze: 'AI 智能分析',
     };
 
+    // 提取子进度（API 返回在 result.progress 中）
+    const progressData = result.progress || {};
+    const resultData = result.result || {};
+    const downloadInfo = progressData.download_progress || resultData.download_progress || {};
+    const transcribeInfo = progressData.transcribe_live || resultData.transcribe_live || {};
+    downloadProgress = downloadInfo.percent || null;
+    transcribeProgress = transcribeInfo.percent || null;
+    const downloadSpeed = downloadInfo.speed || '';
+    const downloadText = downloadInfo.text || '';
+
     // 提取 current_step，如果为 null/undefined，则根据 taskStatus 推断
-    let inferredStep = result.current_step;
+    let inferredStep = progressData.current_step || result.current_step;
     if (!inferredStep) {
       if (taskStatus === 'queued' || taskStatus === 'running') {
         inferredStep = 'extract';  // 队列中或运行中但未初始化，假设在第一步
@@ -562,10 +579,22 @@ Page({
       currentStep = 'analyze';
       currentMessage = '分析完成';
       stepStatus = { extract: 'completed', download: 'completed', transcribe: 'completed', analyze: 'completed' };
+      downloadProgress = 100;
+      transcribeProgress = 100;
+      // 任务完成，停止计时器
+      if (this.timerInterval) {
+        clearInterval(this.timerInterval);
+        this.timerInterval = null;
+      }
     } else if (taskStatus === 'failed' || taskStatus === 'error') {
       overallProgress = 0;
       currentStep = 'error';
       currentMessage = result.error_message || result.message || '分析失败';
+      // 任务失败，停止计时器
+      if (this.timerInterval) {
+        clearInterval(this.timerInterval);
+        this.timerInterval = null;
+      }
     } else if (taskStatus === 'processing' || taskStatus === 'running') {
       // 根据推断的 current_step 更新进度和步骤状态
       if (inferredStep === 'extract') {
@@ -576,12 +605,19 @@ Page({
       } else if (inferredStep === 'download') {
         overallProgress = 30;
         currentStep = 'download';
-        currentMessage = '正在下载视频...';
+        if (downloadProgress !== null) {
+          let msg = `正在下载视频... ${downloadProgress}%`;
+          if (downloadSpeed) msg += ` (${downloadSpeed})`;
+          if (downloadText) msg += ` ${downloadText}`;
+          currentMessage = msg;
+        } else {
+          currentMessage = '正在下载视频...';
+        }
         stepStatus = { extract: 'completed', download: 'active', transcribe: 'pending', analyze: 'pending' };
       } else if (inferredStep === 'transcribe') {
         overallProgress = 60;
         currentStep = 'transcribe';
-        currentMessage = '正在语音转文字...';
+        currentMessage = transcribeProgress !== null ? `正在语音转文字... ${transcribeProgress}%` : '正在语音转文字...';
         stepStatus = { extract: 'completed', download: 'completed', transcribe: 'active', analyze: 'pending' };
       } else if (inferredStep === 'analyze') {
         overallProgress = 90;
@@ -615,6 +651,8 @@ Page({
       currentMessage,
       stepStatus,
       currentStepName,
+      downloadProgress,
+      transcribeProgress,
     });
   },
 
@@ -627,22 +665,29 @@ Page({
     this.setData({ elapsedTimeFormat: formatted });
   },
 
-  // 启动计时器
+  // 启动计时器（基于任务开始时间计算 elapsed）
   startTimer() {
-    // 清理旧的计时器
+    // 如果已经有计时器在运行，不重复启动
     if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-      this.timerInterval = null;
+      return;
     }
 
-    // 重置时间
-    this.setData({ elapsedTime: 0, elapsedTimeFormat: '00:00' });
+    // 如果没有记录任务开始时间，以当前时刻作为开始时间
+    if (!this._taskStartTime) {
+      this._taskStartTime = Date.now();
+    }
 
     // 启动新的计时器
+    const self = this;
     this.timerInterval = setInterval(() => {
-      const newTime = (this.data.elapsedTime || 0) + 1;
-      this.setData({ elapsedTime: newTime });
-      this.updateTimerDisplay();
+      const elapsed = Math.floor((Date.now() - self._taskStartTime) / 1000);
+      const mins = Math.floor(elapsed / 60);
+      const secs = elapsed % 60;
+      const formatted = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      self.setData({
+        elapsedTime: elapsed,
+        elapsedTimeFormat: formatted
+      });
     }, 1000);
   },
 
@@ -666,89 +711,31 @@ Page({
       }
 
       try {
-        const result = await analysisApi.getById(self.currentTaskId);
+        // 使用 getProgress 获取详细进度（包含 download_progress 和 transcribe_live）
+        const progressResult = await analysisApi.getProgress(self.currentTaskId);
 
         // 更新进度显示
-        self.updateProgressDisplay(result);
+        self.updateProgressDisplay(progressResult);
 
-        // 更新分析结果数据（如果有的话）
-        if (result.result) {
-          const analysisResult = result.result || {};
-
-          // 处理核心要点
-          let keypoints = [];
-          if (analysisResult.key_points && Array.isArray(analysisResult.key_points)) {
-            keypoints = analysisResult.key_points.map(item => {
-              if (typeof item === 'string') {
-                return { title: item, content: '' };
-              }
-              return {
-                title: item.text || item.title || item.name || item.point || '要点',
-                content: item.content || item.description || item.detail || '',
-                timestamp: item.timestamp || item.time || '',
-              };
-            });
-          }
-
-          // 处理思维导图
-          let mindmap = '';
-          if (analysisResult.mindmap) {
-            if (typeof analysisResult.mindmap === 'string') {
-              mindmap = analysisResult.mindmap;
-            } else if (typeof analysisResult.mindmap === 'object') {
-              mindmap = self.formatMindmap(analysisResult.mindmap);
-            }
-          }
-
-          // 处理章节
-          let chapters = [];
-          if (analysisResult.chapters && Array.isArray(analysisResult.chapters)) {
-            chapters = analysisResult.chapters.map(chapter => {
-              if (typeof chapter === 'string') {
-                return { title: chapter, content: '' };
-              }
-              return {
-                title: chapter.title || chapter.name || chapter.chapter || '章节',
-                content: chapter.content || chapter.description || chapter.summary || '',
-                startTime: chapter.start_time || chapter.startTime || '',
-                endTime: chapter.end_time || chapter.endTime || '',
-              };
-            });
-          }
-
-          // 构建完整的 analysis 对象
-          try {
-            const analysis = self.buildAnalysisObject(result, keypoints, mindmap);
-
-            // 更新所有分析数据
-            self.setData({
-              analysis: analysis,
-              summary: analysisResult.summary || '',
-              keypoints: keypoints,
-              chapters: chapters,
-              mindmap: mindmap,
-            });
-          } catch (e) {
-            console.error('[ERROR] 构建分析对象失败:', e);
-          }
-        }
-
-        const task = store.getCurrentTask();
-        if (task && task.taskId === self.currentTaskId) {
-          store.updateTask(task.taskId, {
-            status: result.status,
-            progress: self.data.overallProgress,
-            currentStep: result.current_step,
-          });
-        }
-
+        // 检查是否完成，完成后获取完整结果
         const terminalStates = ['completed', 'failed', 'error'];
-        if (terminalStates.includes(result.status)) {
+        if (terminalStates.includes(progressResult.status)) {
           self.cleanupInterval();
-          // 再加载一次确保获取最新的完整数据
+          // 任务完成后，加载完整任务详情
           setTimeout(() => {
             self.loadTaskDetails();
           }, 500);
+          return;
+        }
+
+        // 更新 store 中的任务状态
+        const task = store.getCurrentTask();
+        if (task && task.taskId === self.currentTaskId) {
+          store.updateTask(task.taskId, {
+            status: progressResult.status,
+            progress: self.data.overallProgress,
+            currentStep: progressResult.progress?.current_step,
+          });
         }
 
       } catch (error) {

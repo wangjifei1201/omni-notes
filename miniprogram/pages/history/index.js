@@ -33,14 +33,15 @@ Page({
     delBtnWidth: 80,
   },
 
-  onLoad() {
+  async onLoad() {
+    await this.loadGroups();
     this.loadHistory();
   },
 
-  onShow() {
+  async onShow() {
     // 每次显示时刷新历史记录和分组
+    await this.loadGroups();
     this.loadHistory();
-    this.loadGroups();
   },
 
   // 加载历史记录
@@ -65,6 +66,10 @@ Page({
           point: (kp.point || '').substring(0, 50)
         }));
 
+        // 根据 group_id 查找分组名称
+        const group = this.data.groups.find(g => g.id === item.group_id);
+        const group_name = group ? group.name : '';
+
         return {
           ...item,
           x: 0,
@@ -74,6 +79,7 @@ Page({
           summary: item.summary || '',
           key_points: processedKeyPoints,
           analysis_type: item.analysis_type || '综合分析',
+          group_name,
         };
       });
 
@@ -219,7 +225,7 @@ Page({
   // 删除历史记录
   async onDeleteHistory(e) {
     const { historyId } = e.currentTarget.dataset;
-    
+
     wx.showModal({
       title: '删除记录',
       content: '确定要删除此记录吗？',
@@ -227,15 +233,15 @@ Page({
         if (res.confirm) {
           try {
             await historyApi.delete(historyId);
-            
-            // 从列表中移除
-            const history = this.data.history.filter(item => item.id !== historyId);
-            this.setData({ history });
-            
+
             wx.showToast({
               title: '已删除',
               icon: 'success',
             });
+
+            // 刷新历史记录和分组统计
+            this.loadHistory();
+            this.loadGroups();
           } catch (error) {
             wx.showToast({
               title: error.message || '删除失败',

@@ -55,11 +55,11 @@
             <text class="tab-count" wx:if="{{item.video_count > 0}}">{{item.video_count}}</text>
           </view>
         </block>
-        <view class="tab-item manage-tab" bindtap="onOpenGroupManager">
-          <text class="manage-icon">⋮</text>
-        </view>
       </view>
     </scroll-view>
+    <view class="tab-item manage-tab" bindtap="onOpenGroupManager">
+      <text class="manage-icon">⋮</text>
+    </view>
   </view>
 
   <!-- 内容区 -->
@@ -79,7 +79,11 @@
           <!-- 标题行 -->
           <view class="card-title-row">
             <text class="card-title">{{item.title || '未命名视频'}}</text>
-            <view class="card-group-btn" data-id="{{item.id}}" catchtap="onMoveToGroup">
+            <!-- 已有分组显示分组标签，未分组显示移入分组按钮 -->
+            <view class="card-group-tag" wx:if="{{item.group_name}}" data-id="{{item.id}}" catchtap="onMoveToGroup">
+              <text>{{item.group_name}}</text>
+            </view>
+            <view class="card-group-btn" wx:else data-id="{{item.id}}" catchtap="onMoveToGroup">
               <text>移入分组</text>
             </view>
           </view>

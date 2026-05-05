@@ -98,7 +98,40 @@ async def update_group(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Update a group.
+    Update a group (full update).
+
+    **Authentication**: Required
+    """
+    group = await group_service.update_group(
+        db,
+        group_id,
+        user.id,
+        name=request.name,
+        sort_order=request.sort_order
+    )
+
+    if not group:
+        raise HTTPException(status_code=404, detail="分组不存在")
+
+    item_count = await group_service.get_group_item_count(db, group.id)
+
+    return GroupResponse(
+        id=group.id,
+        name=group.name,
+        sort_order=group.sort_order,
+        item_count=item_count
+    )
+
+
+@router.patch("/{group_id}", response_model=GroupResponse)
+async def patch_group(
+    group_id: str,
+    request: GroupUpdate,
+    user = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Partially update a group (PATCH - only provided fields are updated).
 
     **Authentication**: Required
     """

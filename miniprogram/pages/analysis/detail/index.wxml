@@ -180,6 +180,11 @@
           </view>
         </view>
       </view>
+
+      <!-- 分组标签（仅在有分组时显示） -->
+      <view class="group-tag" wx:if="{{analysis.group_name}}">
+        <text class="group-tag-text">{{analysis.group_name}}</text>
+      </view>
     </view>
 
     <!-- Tab 内容区（分析完成后显示） -->
@@ -332,42 +337,5 @@
     <!-- 底部留白 -->
     <view class="bottom-spacer"></view>
   </scroll-view>
-
-  <!-- 底部操作栏（分析完成后显示）- 分组版 -->
-  <view class="bottom-bar" wx:if="{{task && task.status === 'completed'}}">
-    <view class="group-info" bindtap="onShowGroupPicker">
-      <text class="group-icon">📁</text>
-      <text class="group-name">{{analysis.group_name || '未分组'}}</text>
-      <text class="group-arrow">›</text>
-    </view>
-    <button class="action-btn primary" bindtap="onShowGroupPicker">
-      <text class="btn-icon">◈</text>
-      <text class="btn-text">{{analysis.group_id ? '切换分组' : '添加分组'}}</text>
-    </button>
-  </view>
-
-  <!-- 分组选择面板 -->
-  <view class="action-sheet" wx:if="{{showGroupSheet}}">
-    <view class="sheet-backdrop" bindtap="onCloseGroupSheet"></view>
-    <view class="sheet-content">
-      <view class="sheet-header">
-        <text class="sheet-title">选择分组</text>
-      </view>
-      <view class="sheet-actions">
-        <view
-          class="group-item {{analysis.group_id === item.id ? 'active' : ''}}"
-          wx:for="{{groups}}"
-          wx:key="id"
-          data-group-id="{{item.id}}"
-          bindtap="onSelectGroup"
-        >
-          <text class="group-item-icon">📁</text>
-          <text class="group-item-name">{{item.name}}</text>
-          <text class="group-item-check" wx:if="{{analysis.group_id === item.id}}">✓</text>
-        </view>
-      </view>
-      <button class="sheet-cancel" bindtap="onCloseGroupSheet">取消</button>
-    </view>
-  </view>
 
 </view>

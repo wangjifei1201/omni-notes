@@ -85,7 +85,7 @@
 .video-card-wrapper {
   position: relative;
   overflow: hidden;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .video-card {
@@ -877,6 +877,21 @@
   background: linear-gradient(90deg, #7c3aed 0%, #00d4ff 100%);
   border-radius: 2px;
   transition: width 0.3s ease;
+}
+
+/* ========== 分组标签 ========== */
+.group-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: #f0f0f5;
+  border-radius: 8px;
+  margin-top: 8px;
+}
+
+.group-tag-text {
+  font-size: 12px;
+  color: #666;
 }
 
 /* ========== 底部操作栏 ========== */
