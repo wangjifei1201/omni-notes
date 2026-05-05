@@ -365,58 +365,9 @@
           <text class="group-item-name">{{item.name}}</text>
           <text class="group-item-check" wx:if="{{analysis.group_id === item.id}}">✓</text>
         </view>
-        <view
-          class="group-item {{!analysis.group_id ? 'active' : ''}}"
-          data-group-id="ungrouped"
-          bindtap="onSelectGroup"
-        >
-          <text class="group-item-icon">📋</text>
-          <text class="group-item-name">未分组</text>
-          <text class="group-item-check" wx:if="{{!analysis.group_id}}">✓</text>
-        </view>
       </view>
-      <button class="sheet-btn create-group" bindtap="onCreateGroup">
-        <text class="btn-icon">+</text>
-        <text class="btn-text">新建分组</text>
-      </button>
       <button class="sheet-cancel" bindtap="onCloseGroupSheet">取消</button>
     </view>
   </view>
 
-  <!-- 新建分组弹窗 -->
-  <view class="modal" wx:if="{{showCreateGroupModal}}">
-    <view class="modal-backdrop" bindtap="onCloseCreateGroupModal"></view>
-    <view class="modal-content">
-      <view class="modal-header">
-        <text class="modal-title">新建分组</text>
-        <button class="modal-close" bindtap="onCloseCreateGroupModal">
-          <text>✕</text>
-        </button>
-      </view>
-      <view class="form-group">
-        <text class="form-label">分组名称</text>
-        <input
-          class="form-input"
-          type="text"
-          placeholder="请输入分组名称"
-          value="{{createGroupForm.name}}"
-          bindinput="onCreateGroupNameInput"
-        />
-      </view>
-      <view class="form-group">
-        <text class="form-label">分组描述</text>
-        <input
-          class="form-input"
-          type="text"
-          placeholder="请输入分组描述（可选）"
-          value="{{createGroupForm.description}}"
-          bindinput="onCreateGroupDescInput"
-        />
-      </view>
-      <view class="modal-actions">
-        <button class="btn btn-secondary" bindtap="onCloseCreateGroupModal">取消</button>
-        <button class="btn btn-primary" bindtap="onSaveCreateGroup">保存</button>
-      </view>
-    </view>
-  </view>
 </view>
