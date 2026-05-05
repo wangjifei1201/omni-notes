@@ -8,6 +8,7 @@ Page({
     isAnalyzing: false,
     showAuthModal: false,
     isLoggedIn: false,
+    focused: false,
   },
 
   onLoad() {
@@ -31,6 +32,14 @@ Page({
   onUrlInput(e) {
     const videoUrl = e.detail.value;
     this.setData({ videoUrl });
+  },
+
+  onFocus: function() {
+    this.setData({ focused: true });
+  },
+
+  onBlur: function() {
+    this.setData({ focused: false });
   },
 
   onSubmitAnalysis() {
