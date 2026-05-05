@@ -112,6 +112,15 @@
   color: #ffffff;
 }
 
+.manage-tab {
+  padding: 6px 10px;
+  color: #999;
+}
+
+.manage-icon {
+  font-size: 14px;
+}
+
 .tab-name {
   font-size: 13px;
 }

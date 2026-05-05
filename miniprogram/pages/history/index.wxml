@@ -4,9 +4,7 @@
   <view class="nav-header">
     <view class="nav-left"></view>
     <text class="page-title">分析历史</text>
-    <view class="nav-right" bindtap="onOpenGroupManager">
-      <text class="manage-btn">⚙</text>
-    </view>
+    <view class="nav-right"></view>
   </view>
 
   <!-- 搜索栏 -->
@@ -57,6 +55,9 @@
             <text class="tab-count" wx:if="{{item.video_count > 0}}">{{item.video_count}}</text>
           </view>
         </block>
+        <view class="tab-item manage-tab" bindtap="onOpenGroupManager">
+          <text class="manage-icon">⋮</text>
+        </view>
       </view>
     </scroll-view>
   </view>
