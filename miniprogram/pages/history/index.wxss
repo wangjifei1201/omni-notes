@@ -2,9 +2,13 @@
 
 .page-container {
   min-height: 100vh;
+  max-width: 100vw;
+  width: 100%;
   background: #f8f9fc;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 /* 导航栏 */
