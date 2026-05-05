@@ -28,4 +28,9 @@ config.json
 # Tool configs (auto-managed)
 .gstack/
 .kilo/
+# Environment variables
+.env
+backend/.env
+
+# Python cache
 backend/app/routers/__pycache__/groups.cpython-311.pyc
