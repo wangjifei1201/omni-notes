@@ -2695,3 +2695,29 @@ git commit -m "feat(profile): 重构我的页面UI，遵循设计系统"
 3. **详情页**: Tab切换正常，左滑显示操作按钮
 4. **我的页面**: 用户信息、统计、菜单正常显示
 5. **全局**: 设计系统变量统一，无样式冲突
+
+---
+
+## 更新记录 (2026-05-05)
+
+### Bug Fix: 历史页导航栏和管理按钮位置调整
+
+**问题:**
+1. 导航栏右侧分组管理按钮(⚙)被小程序系统返回键遮挡
+2. 分组标签栏没有 ⋮ 管理按钮
+3. 历史分析任务区域存在横向滚动条
+
+**解决方案:**
+- 移除导航栏右侧 ⚙ 按钮
+- 分组标签栏末尾添加 ⋮ 按钮，点击打开分组管理面板
+- `.page-container` 添加 `overflow-x: hidden` 防止横向溢出
+- 历史卡片标题行添加"移入分组"按钮
+
+**修改文件:**
+- `miniprogram/pages/history/index.wxml` - 移除 nav-right，添加 manage-tab
+- `miniprogram/pages/history/index.wxss` - 添加 overflow-x: hidden，添加 manage-tab 样式
+- `miniprogram/pages/history/index.js` - 更新 onMoveToGroup 函数
+
+**Spec 更新:**
+- 文档第14节"小程序历史页面交互设计"已新增
+- 文档第2节"历史页"已标注重要更新
