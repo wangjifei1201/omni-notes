@@ -225,7 +225,7 @@ class HistoryItem(BaseModel):
     duration: Optional[int]
     status: str
     created_at: datetime
-    group_ids: List[str] = []
+    group_id: Optional[str] = None  # 分组ID，一个任务只属于一个分组
     summary: Optional[str] = None  # AI分析摘要
     key_points: List[Dict[str, Any]] = []  # AI提取的关键要点
 

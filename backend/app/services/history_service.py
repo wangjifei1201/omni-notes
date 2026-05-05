@@ -84,6 +84,31 @@ class HistoryService:
         return await analysis_service.delete_task(db, task_id, user_id)
 
     @staticmethod
+    async def update_history(
+        db: AsyncSession,
+        task_id: str,
+        user_id: str,
+        group_id: Optional[str] = None,
+        is_favorite: Optional[bool] = None
+    ) -> bool:
+        """
+        Update a history item (group_id or is_favorite).
+
+        Args:
+            db: Database session
+            task_id: Task ID
+            user_id: User ID for permission check
+            group_id: New group ID (None means ungrouped)
+            is_favorite: New favorite status
+
+        Returns:
+            True if updated, False if not found
+        """
+        from app.services.analysis_service import analysis_service
+
+        return await analysis_service.update_task(db, task_id, user_id, group_id=group_id, is_favorite=is_favorite)
+
+    @staticmethod
     async def to_history_item(
         db: AsyncSession,
         task: AnalysisTask
@@ -98,7 +123,7 @@ class HistoryService:
         Returns:
             HistoryItem
         """
-        # Get group IDs for this task
+        # 获取分组ID - 一个任务只属于一个分组
         from app.models.group import task_groups
         from sqlalchemy import select
 
@@ -106,9 +131,11 @@ class HistoryService:
             select(task_groups.c.group_id)
             .where(task_groups.c.task_id == task.id)
         )
-        group_ids = [row[0] for row in result.fetchall()]
+        group_rows = result.fetchall()
+        # 只取第一个分组，如果有多个的话
+        group_id = group_rows[0][0] if group_rows else None
 
-        # Extract summary and key_points from result if available
+        # 提取摘要和关键要点
         summary = None
         key_points = []
         if task.result:
@@ -128,7 +155,7 @@ class HistoryService:
             duration=task.duration,
             status=task.status,
             created_at=task.created_at,
-            group_ids=group_ids,
+            group_id=group_id,
             summary=summary,
             key_points=key_points
         )

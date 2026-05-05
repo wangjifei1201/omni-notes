@@ -312,7 +312,36 @@ async def get_analysis(
         "current_step": current_step,
         "message": _get_step_message(task_status, current_step),
         "error_message": error_msg,
+        # 获取分组信息
+        "group_id": None,
+        "group_name": None,
     }
+
+    # 获取任务的分组信息
+    try:
+        from app.models.group import task_groups
+        from sqlalchemy import select
+
+        # 查询任务所属的分组ID
+        stmt = select(task_groups.c.group_id).where(task_groups.c.task_id == task.id)
+        result = await db.execute(stmt)
+        group_row = result.fetchone()
+
+        if group_row:
+            group_id = group_row[0]
+            response["group_id"] = group_id
+
+            # 查询分组名称
+            from app.models.group import Group
+            group_stmt = select(Group.name).where(Group.id == group_id)
+            group_result = await db.execute(group_stmt)
+            group_name = group_result.scalar()
+            if group_name:
+                response["group_name"] = group_name
+    except Exception as e:
+        print(f"[DEBUG] 获取分组信息失败: {e}")
+        import traceback
+        traceback.print_exc()
 
     return response
 

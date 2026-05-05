@@ -273,6 +273,49 @@ class AnalysisService:
         return True
 
     @staticmethod
+    async def update_task(
+        db: AsyncSession,
+        task_id: str,
+        user_id: str,
+        group_id: Optional[str] = None,
+        is_favorite: Optional[bool] = None
+    ) -> bool:
+        """
+        Update a task (group_id or is_favorite).
+
+        Args:
+            db: Database session
+            task_id: Task ID
+            user_id: User ID for permission check
+            group_id: New group ID (None means ungrouped)
+            is_favorite: New favorite status
+
+        Returns:
+            True if updated, False if not found
+        """
+        task = await AnalysisService.get_task(db, task_id, user_id)
+        if not task:
+            return False
+
+        # Handle group_id (many-to-many relationship)
+        if group_id is not None:
+            from app.models.group import task_groups
+
+            # Remove from all existing groups first
+            await db.execute(
+                task_groups.delete().where(task_groups.c.task_id == task_id)
+            )
+
+            # Add to new group if specified
+            if group_id:
+                await db.execute(
+                    task_groups.insert().values(task_id=task_id, group_id=group_id)
+                )
+
+        await db.commit()
+        return True
+
+    @staticmethod
     async def regenerate_task(
         db: AsyncSession,
         task_id: str,

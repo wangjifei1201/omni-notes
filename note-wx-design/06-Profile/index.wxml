@@ -7,8 +7,17 @@
     <view class="bg-orb orb-2"></view>
   </view>
 
-  <!-- 顶部导航 -->
-  <view class="nav-header">
+  <!-- 品牌头部 -->
+  <view class="brand-header">
+    <view class="brand-logo">O</view>
+    <view class="brand-info">
+      <span class="brand-name">Omni-Notes</span>
+      <span class="brand-slogan">AI 视频笔记</span>
+    </view>
+  </view>
+
+  <!-- 页面标题 -->
+  <view class="page-header">
     <text class="page-title">我的</text>
     <button class="settings-btn" bindtap="onGoSettings">
       <text class="settings-icon">◈</text>

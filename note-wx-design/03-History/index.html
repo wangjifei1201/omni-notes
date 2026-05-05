@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Omni-Notes 历史记录页原型</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f5f7;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    header { text-align: center; margin-bottom: 32px; }
+    h1 { font-size: 24px; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; }
+    .subtitle { font-size: 14px; color: #8b8b9e; }
+    .preview-grid { display: flex; justify-content: center; gap: 32px; flex-wrap: wrap; }
+    .phone-frame {
+      width: 300px;
+      height: 580px;
+      background: #1a1a2e;
+      border-radius: 40px;
+      padding: 10px;
+      box-shadow: 0 20px 40px -12px rgba(0,0,0,0.25);
+    }
+    .phone-screen {
+      width: 100%;
+      height: 100%;
+      background: #ffffff;
+      border-radius: 30px;
+      overflow: hidden;
+      position: relative;
+    }
+    .phone-notch {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100px;
+      height: 24px;
+      background: #1a1a2e;
+      border-radius: 0 0 16px 16px;
+      z-index: 100;
+    }
+    .screen-content {
+      width: 100%;
+      height: 100%;
+      padding: 50px 16px 70px;
+      display: flex;
+      flex-direction: column;
+      background: #f5f6fa;
+    }
+    /* 页面样式 */
+    .nav-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 0 12px;
+    }
+    .page-title { font-size: 18px; font-weight: 600; color: #1a1a2e; }
+    .nav-right { width: 40px; display: flex; justify-content: flex-end; }
+    .manage-btn { font-size: 14px; color: #999; }
+    /* 搜索栏 */
+    .search-section { margin-bottom: 12px; }
+    .search-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 8px 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .search-icon { font-size: 16px; color: #999; }
+    .search-placeholder { color: #bbb; font-size: 15px; }
+    /* 分组标签栏 */
+    .group-tabs {
+      margin-bottom: 12px;
+      position: relative;
+    }
+    .tabs-scroll {
+      white-space: nowrap;
+      width: 100%;
+    }
+    .tabs-list {
+      display: inline-flex;
+      gap: 6px;
+      padding: 0 0 4px;
+    }
+    .group-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      background: #f0f0f5;
+      border-radius: 12px;
+      font-size: 11px;
+      color: #666;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+    }
+    .group-tab.active {
+      background: #7c3aed;
+      color: #ffffff;
+    }
+    .group-tab:active { opacity: 0.7; }
+    .tab-name { font-size: 11px; }
+    .tab-count {
+      font-size: 9px;
+      color: #999;
+    }
+    .group-tab.active .tab-count {
+      color: rgba(255,255,255,0.8);
+    }
+    /* 历史列表 */
+    .history-list { display: flex; flex-direction: column; gap: 12px; flex: 1; overflow-y: auto; }
+    .history-card {
+      display: flex;
+      flex-direction: row;
+      gap: 12px;
+      padding: 11px 14px;
+      background: #ffffff;
+      border-radius: 12px;
+      position: relative;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+      align-items: center;
+    }
+    .card-content { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+    .card-title-row { display: flex; align-items: flex-start; gap: 8px; }
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1a1a2e;
+      line-height: 1.4;
+      flex: 1;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    /* 要点列表 */
+    .card-keypoints-row { display: flex; align-items: flex-start; gap: 8px; }
+    .keypoints-content { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+    .keypoint-item { display: flex; align-items: flex-start; gap: 6px; line-height: 1.4; }
+    .keypoint-number { font-size: 11px; font-weight: 700; color: #7c3aed; line-height: 1.4; flex-shrink: 0; min-width: 14px; text-align: center; }
+    .keypoint-text { font-size: 11px; color: #666; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+    /* 元信息 */
+    .card-meta-row { display: flex; align-items: center; font-size: 12px; color: #999; }
+    .meta-content { display: flex; align-items: center; gap: 4px; flex: 1; flex-wrap: wrap; }
+    .meta-text { font-size: 11px; color: #999; }
+    .meta-sep { font-size: 11px; color: #ddd; margin: 0 2px; }
+    .meta-platform { font-size: 11px; color: #999; font-weight: 500; }
+    .meta-platform.bilibili { color: #00A1D6; }
+    .meta-time { font-size: 11px; color: #999; }
+    /* 状态标签 */
+    .card-actions-bar { display: flex; flex-direction: column; gap: 6px; align-items: center; justify-content: center; flex-shrink: 0; }
+    .status-badge {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 2px;
+      padding: 3px 6px;
+      border-radius: 10px;
+      font-size: 9px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .status-badge.completed { background: rgba(16,185,129,0.1); color: #10b981; }
+    .status-badge.processing { background: rgba(59,130,246,0.1); color: #3b82f6; }
+    .status-icon { font-size: 8px; line-height: 1; }
+    .status-text { font-size: 8px; line-height: 1; }
+    /* TabBar */
+    .tab-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 60px; background: #ffffff; border-top: 1px solid #f0f0f5; display: flex; }
+    .tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+    .tab-icon { font-size: 20px; color: #8b8b9e; }
+    .tab-label { font-size: 10px; color: #8b8b9e; }
+    .tab-item.active .tab-icon, .tab-item.active .tab-label { color: #7c3aed; }
+    /* 分组管理面板 */
+    .group-manager-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; display: flex; align-items: flex-end; }
+    .group-manager-sheet { position: absolute; bottom: 0; left: 0; right: 0; background: #ffffff; border-radius: 16px 16px 0 0; padding: 16px 0 34px; max-height: 70vh; overflow-y: auto; }
+    .sheet-handle { width: 36px; height: 4px; background: #e0e0e0; border-radius: 2px; margin: 0 auto 16px; }
+    .sheet-header { display: flex; align-items: center; justify-content: space-between; padding: 0 20px 16px; border-bottom: 1px solid #f0f0f5; }
+    .sheet-title { font-size: 16px; font-weight: 600; color: #1a1a2e; }
+    .sheet-action { font-size: 14px; color: #7c3aed; }
+    .group-list { padding: 12px 20px; }
+    .group-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f5f5f5; }
+    .group-item:last-child { border-bottom: none; }
+    .group-dot { width: 8px; height: 8px; border-radius: 50%; background: #7c3aed; }
+    .group-info { flex: 1; }
+    .group-name { font-size: 14px; color: #1a1a2e; }
+    .group-count { font-size: 12px; color: #999; }
+    .group-ops { display: flex; gap: 8px; }
+    .group-op { padding: 4px 10px; font-size: 12px; color: #666; background: #f5f5f5; border-radius: 6px; cursor: pointer; }
+    .group-op:active { opacity: 0.7; }
+    .add-group-btn { display: flex; align-items: center; gap: 8px; padding: 12px 20px; color: #7c3aed; font-size: 14px; }
+    .add-group-btn:active { background: #f8f9fc; }
+    /* 卡片分组操作 */
+    .card-group-btn { font-size: 11px; color: #999; padding: 4px 8px; background: #f5f5f5; border-radius: 6px; flex-shrink: 0; }
+    .card-group-btn:active { opacity: 0.7; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>历史记录页原型</h1>
+      <p class="subtitle">内嵌分组筛选</p>
+    </header>
+
+    <div class="preview-grid">
+      <!-- 历史页 - 带分组筛选 -->
+      <div class="screenshot-item">
+        <div class="phone-frame">
+          <div class="phone-screen">
+            <div class="phone-notch"></div>
+            <div class="screen-content">
+              <!-- 导航栏 -->
+              <div class="nav-header">
+                <div style="width: 40px;"></div>
+                <span class="page-title">分析历史</span>
+                <div class="nav-right">
+                  <span class="manage-btn">⚙</span>
+                </div>
+              </div>
+
+              <!-- 搜索栏 -->
+              <div class="search-section">
+                <div class="search-bar">
+                  <span class="search-icon">◉</span>
+                  <span class="search-placeholder">搜索历史记录...</span>
+                </div>
+              </div>
+
+              <!-- 分组标签栏 -->
+              <div style="display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 4px;">
+                <div class="group-tab active" style="cursor: pointer;" onclick="switchGroupTab(this)">
+                  全部<span style="font-size: 9px; opacity: 0.8;">25</span>
+                </div>
+                <div class="group-tab" style="cursor: pointer;" onclick="switchGroupTab(this)">
+                  未分组<span style="font-size: 9px; color: #999;">8</span>
+                </div>
+                <div class="group-tab" style="cursor: pointer;" onclick="switchGroupTab(this)">
+                  技术教程<span style="font-size: 9px; color: #999;">12</span>
+                </div>
+                <div class="group-tab" style="cursor: pointer;" onclick="switchGroupTab(this)">
+                  产品课程<span style="font-size: 9px; color: #999;">5</span>
+                </div>
+                <div style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; color: #999; font-size: 11px; flex-shrink: 0; cursor: pointer;" onclick="openGroupManager()">
+                  ⋮
+                </div>
+              </div>
+
+              <!-- 历史列表 -->
+              <div class="history-list">
+                <!-- 卡片1 - 已完成 -->
+                <div class="history-card">
+                  <div class="card-content">
+                    <div class="card-title-row">
+                      <span class="card-title">2024年AI发展趋势深度解析：从大模型到AI Agent的技术变革</span>
+                      <span class="card-group-btn" onclick="openGroupSelect(this)">移入分组</span>
+                      <div class="status-badge completed">
+                        <span class="status-icon">✓</span>
+                        <span class="status-text">已完成</span>
+                      </div>
+                    </div>
+                    <div class="card-keypoints-row">
+                      <div class="keypoints-content">
+                        <div class="keypoint-item">
+                          <span class="keypoint-number">1</span>
+                          <span class="keypoint-text">多模态大模型成为发展主流方向</span>
+                        </div>
+                        <div class="keypoint-item">
+                          <span class="keypoint-number">2</span>
+                          <span class="keypoint-text">AI Agent应用场景快速扩展</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="card-meta-row">
+                      <div class="meta-content">
+                        <span class="meta-text">科技频道</span>
+                        <span class="meta-sep">·</span>
+                        <span class="meta-platform bilibili">B站</span>
+                        <span class="meta-sep">·</span>
+                        <span class="meta-time">今天 14:30</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 卡片2 - 进行中 -->
+                <div class="history-card">
+                  <div class="card-content">
+                    <div class="card-title-row">
+                      <span class="card-title">Python编程入门：从变量到函数的完整指南</span>
+                      <div class="status-badge processing">
+                        <span class="status-icon">⟳</span>
+                        <span class="status-text">进行中</span>
+                      </div>
+                    </div>
+                    <div class="card-keypoints-row">
+                      <div class="keypoints-content">
+                        <div class="keypoint-item">
+                          <span class="keypoint-number">1</span>
+                          <span class="keypoint-text">Python环境搭建与基础语法</span>
+                        </div>
+                        <div class="keypoint-item">
+                          <span class="keypoint-number">2</span>
+                          <span class="keypoint-text">函数定义与参数传递方式</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="card-meta-row">
+                      <div class="meta-content">
+                        <span class="meta-text">编程课堂</span>
+                        <span class="meta-sep">·</span>
+                        <span class="meta-platform bilibili">B站</span>
+                        <span class="meta-sep">·</span>
+                        <span class="meta-time">今天 10:15</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 卡片3 - 已完成 -->
+                <div class="history-card">
+                  <div class="card-content">
+                    <div class="card-title-row">
+                      <span class="card-title">深入理解 React 核心原理与设计模式</span>
+                      <div class="status-badge completed">
+                        <span class="status-icon">✓</span>
+                        <span class="status-text">已完成</span>
+                      </div>
+                    </div>
+                    <div class="card-keypoints-row">
+                      <div class="keypoints-content">
+                        <div class="keypoint-item">
+                          <span class="keypoint-number">1</span>
+                          <span class="keypoint-text">虚拟DOM与Diff算法原理</span>
+                        </div>
+                        <div class="keypoint-item">
+                          <span class="keypoint-number">2</span>
+                          <span class="keypoint-text">组件生命周期与Hooks</span>
+                        </div>
+                        <div class="keypoint-item">
+                          <span class="keypoint-number">3</span>
+                          <span class="keypoint-text">状态管理与数据流</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="card-meta-row">
+                      <div class="meta-content">
+                        <span class="meta-text">前端开发</span>
+                        <span class="meta-sep">·</span>
+                        <span class="meta-platform bilibili">B站</span>
+                        <span class="meta-sep">·</span>
+                        <span class="meta-time">昨天 18:42</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- TabBar (3个Tab) -->
+              <div class="tab-bar">
+                <div class="tab-item">
+                  <span class="tab-icon">◈</span>
+                  <span class="tab-label">首页</span>
+                </div>
+                <div class="tab-item active">
+                  <span class="tab-icon">◊</span>
+                  <span class="tab-label">历史</span>
+                </div>
+                <div class="tab-item">
+                  <span class="tab-icon">◯</span>
+                  <span class="tab-label">我的</span>
+                </div>
+              </div>
+
+              <!-- 分组选择面板 -->
+              <div id="groupSelectSheet" class="group-manager-overlay" style="display: none;" onclick="closeGroupSelect(event)">
+                <div class="group-manager-sheet" style="max-height: 50vh;" onclick="event.stopPropagation()">
+                  <div class="sheet-handle"></div>
+                  <div class="sheet-header">
+                    <span class="sheet-title">选择分组</span>
+                    <span class="sheet-action" onclick="closeGroupSelect()">取消</span>
+                  </div>
+                  <div class="group-list">
+                    <div class="group-item" style="cursor: pointer;" onclick="moveToGroup('技术教程')">
+                      <div class="group-dot"></div>
+                      <div class="group-info">
+                        <div class="group-name">技术教程</div>
+                        <div class="group-count">12 个任务</div>
+                      </div>
+                    </div>
+                    <div class="group-item" style="cursor: pointer;" onclick="moveToGroup('产品课程')">
+                      <div class="group-dot" style="background: #10b981;"></div>
+                      <div class="group-info">
+                        <div class="group-name">产品课程</div>
+                        <div class="group-count">5 个任务</div>
+                      </div>
+                    </div>
+                    <div class="group-item" style="cursor: pointer;" onclick="moveToGroup('新建分组')">
+                      <div style="width: 20px; height: 20px; border-radius: 50%; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #ccc;">+</div>
+                      <div class="group-info">
+                        <div class="group-name" style="color: #7c3aed;">新建分组</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 分组管理面板 -->
+              <div id="groupManagerSheet" class="group-manager-overlay" style="display: none;" onclick="closeGroupManager(event)">
+                <div class="group-manager-sheet" onclick="event.stopPropagation()">
+                  <div class="sheet-handle"></div>
+                  <div class="sheet-header">
+                    <span class="sheet-title">分组管理</span>
+                    <span class="sheet-action" onclick="closeGroupManager()">完成</span>
+                  </div>
+                  <div class="add-group-btn" style="cursor: pointer;">
+                    <span>+</span>
+                    <span>新建分组</span>
+                  </div>
+                  <div class="group-list">
+                    <div class="group-item">
+                      <div class="group-dot"></div>
+                      <div class="group-info">
+                        <div class="group-name">技术教程</div>
+                        <div class="group-count">12 个任务</div>
+                      </div>
+                      <div class="group-ops">
+                        <span class="group-op">编辑</span>
+                        <span class="group-op" style="color: #ef4444;">删除</span>
+                      </div>
+                    </div>
+                    <div class="group-item">
+                      <div class="group-dot" style="background: #10b981;"></div>
+                      <div class="group-info">
+                        <div class="group-name">产品课程</div>
+                        <div class="group-count">5 个任务</div>
+                      </div>
+                      <div class="group-ops">
+                        <span class="group-op">编辑</span>
+                        <span class="group-op" style="color: #ef4444;">删除</span>
+                      </div>
+                    </div>
+                    <div class="group-item">
+                      <div class="group-dot" style="background: #f59e0b;"></div>
+                      <div class="group-info">
+                        <div class="group-name">AI 研究</div>
+                        <div class="group-count">3 个任务</div>
+                      </div>
+                      <div class="group-ops">
+                        <span class="group-op">编辑</span>
+                        <span class="group-op" style="color: #ef4444;">删除</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="text-align: center; margin-top: 12px; font-size: 13px; color: #6b7280;">历史页 - 内嵌分组筛选</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function switchGroupTab(btn) {
+      document.querySelectorAll('.group-tab').forEach(function(t) {
+        t.classList.remove('active');
+      });
+      btn.classList.add('active');
+    }
+    function openGroupSelect(e) {
+      if (e) e.stopPropagation();
+      document.getElementById('groupSelectSheet').style.display = 'flex';
+    }
+    function closeGroupSelect(e) {
+      if (e && e.target !== e.currentTarget) return;
+      document.getElementById('groupSelectSheet').style.display = 'none';
+    }
+    function openGroupManager(e) {
+      if (e) e.stopPropagation();
+      document.getElementById('groupManagerSheet').style.display = 'flex';
+    }
+    function closeGroupManager(e) {
+      if (e && e.target !== e.currentTarget) return;
+      document.getElementById('groupManagerSheet').style.display = 'none';
+    }
+    function moveToGroup(groupName) {
+      alert('已移入「' + groupName + '」分组');
+      closeGroupSelect();
+    }
+  </script>
+</body>
+</html>

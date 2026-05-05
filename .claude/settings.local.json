@@ -78,7 +78,17 @@
       "Bash(pip3 list:*)",
       "Bash(pip list:*)",
       "Bash(pip3 show:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(npm search:*)",
+      "Bash(cp:*)",
+      "WebFetch(domain:claude.ai)",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(claude --version)",
+      "Bash(claude -v)",
+      "Bash(claude plugins:*)",
+      "Bash(git:*)"
     ]
   }
 }

@@ -59,6 +59,10 @@ Page({
         console.log('[loadData] 调用 historyApi.getList()');
         history = await historyApi.getList();
         console.log('[loadData] 获取历史记录成功:', history);
+        console.log('[loadData] 历史记录详细信息：');
+        history.forEach((h, idx) => {
+          console.log(`  [${idx}] id=${h.id}, title=${h.title}, group_id=${h.group_id}, group_ids=${JSON.stringify(h.group_ids)}`);
+        });
       } catch (err) {
         console.error('[ERROR] 获取历史记录失败:', err.message || err);
         history = [];
@@ -79,6 +83,16 @@ Page({
         console.warn('[WARN] history 不是数组，重置为空数组');
         history = [];
       }
+
+      // 格式化历史记录，确保 group_id 字段正确
+      history = history.map(h => {
+        // 兼容旧格式：如果有 group_ids (数组)，转换为 group_id (单数)
+        if (h.group_ids && Array.isArray(h.group_ids) && h.group_ids.length > 0 && !h.group_id) {
+          h.group_id = h.group_ids[0];
+          console.warn(`[WARN] 转换 group_ids 为 group_id: ${h.id} -> ${h.group_id}`);
+        }
+        return h;
+      });
 
       // 计算未分组数量
       const ungroupedTasks = history.filter(h => !h.group_id);

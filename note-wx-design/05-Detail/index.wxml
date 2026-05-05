@@ -7,15 +7,20 @@
     <view class="bg-orb orb-2"></view>
   </view>
 
-  <!-- 顶部导航 -->
-  <view class="nav-header">
-    <button class="back-btn" bindtap="onGoBack">
-      <text class="back-icon">‹</text>
-    </button>
+  <!-- 品牌头部 -->
+  <view class="brand-header">
+    <view class="brand-logo">O</view>
+    <view class="brand-info">
+      <span class="brand-name">Omni-Notes</span>
+      <span class="brand-slogan">AI 视频笔记</span>
+    </view>
+  </view>
+
+  <!-- 返回导航 -->
+  <view class="back-nav">
+    <text class="back-icon">←</text>
+    <text class="back-text">返回</text>
     <text class="page-title">分析详情</text>
-    <button class="more-btn" bindtap="onShowActions">
-      <text class="more-icon">◈</text>
-    </button>
   </view>
 
   <!-- 内容区 -->

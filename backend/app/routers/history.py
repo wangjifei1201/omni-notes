@@ -4,6 +4,7 @@ History router for managing user analysis history.
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, require_auth
@@ -13,6 +14,12 @@ from app.services.analysis_service import analysis_service
 
 
 router = APIRouter(prefix="/api/v1/history", tags=["history"])
+
+
+class UpdateHistoryRequest(BaseModel):
+    """Request model for updating history."""
+    group_id: Optional[str] = None
+    is_favorite: Optional[bool] = None
 
 
 @router.get("", response_model=HistoryListResponse)
@@ -73,6 +80,25 @@ async def delete_history(
         raise HTTPException(status_code=404, detail="记录不存在")
 
     return {"success": True, "message": "记录已删除"}
+
+
+@router.patch("/{task_id}")
+async def update_history(
+    task_id: str,
+    body: UpdateHistoryRequest,
+    user = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Update a history item (group_id or is_favorite).
+
+    **Authentication**: Required
+    """
+    updated = await history_service.update_history(db, task_id, user.id, group_id=body.group_id, is_favorite=body.is_favorite)
+    if not updated:
+        raise HTTPException(status_code=404, detail="记录不存在")
+
+    return {"success": True, "message": "更新成功"}
 
 
 @router.get("/search")
