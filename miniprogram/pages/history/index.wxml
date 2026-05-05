@@ -75,8 +75,13 @@
       >
         <!-- 左侧内容区 -->
         <view class="card-content">
-          <!-- 标题 -->
-          <text class="card-title">{{item.title || '未命名视频'}}</text>
+          <!-- 标题行 -->
+          <view class="card-title-row">
+            <text class="card-title">{{item.title || '未命名视频'}}</text>
+            <view class="card-group-btn" data-id="{{item.id}}" catchtap="onMoveToGroup">
+              <text>移入分组</text>
+            </view>
+          </view>
 
           <!-- 要点列表 -->
           <view class="card-keypoints-row" wx:if="{{item.key_points && item.key_points.length > 0}}">
@@ -90,11 +95,13 @@
 
           <!-- 元信息 -->
           <view class="card-meta-row">
-            <text class="meta-text">{{item.author || '未知作者'}}</text>
-            <text class="meta-sep">·</text>
-            <text class="meta-platform {{item.platform}}">{{item.platform === 'bilibili' ? 'B站' : '抖音'}}</text>
-            <text class="meta-sep">·</text>
-            <text class="meta-time">{{item.created_at}}</text>
+            <view class="meta-content">
+              <text class="meta-text">{{item.author || '未知作者'}}</text>
+              <text class="meta-sep">·</text>
+              <text class="meta-platform {{item.platform}}">{{item.platform === 'bilibili' ? 'B站' : '抖音'}}</text>
+              <text class="meta-sep">·</text>
+              <text class="meta-time">{{item.created_at}}</text>
+            </view>
           </view>
         </view>
 
@@ -147,32 +154,37 @@
   <!-- 分组选择面板 -->
   <view class="action-sheet" wx:if="{{showGroupPicker}}">
     <view class="sheet-backdrop" bindtap="onCloseGroupPicker"></view>
-    <view class="sheet-content">
+    <view class="sheet-content group-manager-sheet">
+      <view class="sheet-handle"></view>
       <view class="sheet-header">
-        <text class="sheet-title">移动到分组</text>
+        <text class="sheet-title">选择分组</text>
+        <text class="sheet-action" bindtap="onCloseGroupPicker">取消</text>
       </view>
-      <view class="group-picker-list">
+      <view class="group-list">
         <view
-          class="group-picker-item"
+          class="group-item"
           wx:for="{{groups}}"
           wx:key="id"
           data-group-id="{{item.id}}"
-          bindtap="onConfirmMoveToGroup"
+          catchtap="onConfirmMoveToGroup"
         >
-          <text class="picker-icon">📁</text>
-          <text class="picker-name">{{item.name}}</text>
-          <text class="picker-count">{{item.video_count || 0}} 个视频</text>
+          <view class="group-dot"></view>
+          <view class="group-info">
+            <text class="group-name">{{item.name}}</text>
+            <text class="group-count">{{item.video_count || 0}} 个视频</text>
+          </view>
         </view>
         <view
-          class="group-picker-item"
+          class="group-item"
           data-group-id="ungrouped"
-          bindtap="onConfirmMoveToGroup"
+          catchtap="onConfirmMoveToGroup"
         >
-          <text class="picker-icon">📋</text>
-          <text class="picker-name">未分组</text>
+          <view style="width: 20px; height: 20px; border-radius: 50%; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #ccc;">+</view>
+          <view class="group-info">
+            <text class="group-name" style="color: #7c3aed;">新建分组</text>
+          </view>
         </view>
       </view>
-      <button class="sheet-cancel" bindtap="onCloseGroupPicker">取消</button>
     </view>
   </view>
 
@@ -180,29 +192,30 @@
   <view class="action-sheet" wx:if="{{showGroupManager}}">
     <view class="sheet-backdrop" bindtap="onCloseGroupManager"></view>
     <view class="sheet-content group-manager-sheet">
+      <view class="sheet-handle"></view>
       <view class="sheet-header">
         <text class="sheet-title">管理分组</text>
+        <text class="sheet-action" bindtap="onCloseGroupManager">完成</text>
       </view>
       <view class="group-manager-list">
-        <view class="group-manager-item" wx:for="{{groups}}" wx:key="id">
-          <view class="manager-info">
-            <text class="manager-name">{{item.name}}</text>
-            <text class="manager-count">{{item.video_count || 0}} 个视频</text>
+        <view class="group-item" wx:for="{{groups}}" wx:key="id">
+          <view class="group-dot"></view>
+          <view class="group-info">
+            <text class="group-name">{{item.name}}</text>
+            <text class="group-count">{{item.video_count || 0}} 个视频</text>
           </view>
-          <view class="manager-actions">
-            <button class="manager-btn" data-group-id="{{item.id}}" bindtap="onEditGroup">编辑</button>
-            <button class="manager-btn delete" data-group-id="{{item.id}}" bindtap="onDeleteGroupConfirm">删除</button>
+          <view class="group-ops">
+            <text class="group-op" data-group-id="{{item.id}}" catchtap="onEditGroup">编辑</text>
+            <text class="group-op delete" data-group-id="{{item.id}}" catchtap="onDeleteGroupConfirm">删除</text>
           </view>
         </view>
-        <view class="group-manager-item empty" wx:if="{{groups.length === 0}}">
+        <view class="group-item empty" wx:if="{{groups.length === 0}}">
           <text class="empty-tip">暂无分组</text>
         </view>
       </view>
-      <view class="manager-footer">
-        <button class="btn-create-group" bindtap="onShowAddGroupModal">
-          <text class="btn-icon">+</text>
-          <text>新建分组</text>
-        </button>
+      <view class="add-group-btn" bindtap="onShowAddGroupModal">
+        <text>+</text>
+        <text>新建分组</text>
       </view>
       <button class="sheet-cancel" bindtap="onCloseGroupManager">关闭</button>
     </view>

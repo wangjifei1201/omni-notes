@@ -418,8 +418,15 @@ Page({
   },
 
   // 移动到分组 - 显示分组选择面板
-  onMoveToGroup() {
-    const { currentItem } = this.data;
+  onMoveToGroup(e) {
+    // 如果是从卡片按钮点击，itemId 会通过 dataset 传递
+    const itemId = e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.id;
+    if (itemId) {
+      const item = this.data.history.find(h => h.id === itemId);
+      if (item) {
+        this.setData({ currentItem: item });
+      }
+    }
     this.setData({
       showActionSheet: false,
       showGroupPicker: true,
@@ -436,9 +443,17 @@ Page({
     const groupId = e.currentTarget.dataset.groupId;
     const { currentItem } = this.data;
 
+    // 如果是新建分组选项
+    if (groupId === 'ungrouped') {
+      // 关闭分组选择面板，显示新建分组弹窗
+      this.setData({ showGroupPicker: false });
+      this.onShowAddGroupModal();
+      return;
+    }
+
     try {
       const { historyApi } = require('../../utils/api');
-      await historyApi.updateGroup(currentItem.id, groupId === 'ungrouped' ? null : groupId);
+      await historyApi.updateGroup(currentItem.id, groupId);
       wx.showToast({ title: '已移动', icon: 'success' });
       this.setData({ showGroupPicker: false });
       this.loadHistory();

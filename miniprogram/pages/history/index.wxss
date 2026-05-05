@@ -141,6 +141,7 @@
   background: #ffffff;
   border-radius: 14px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  align-items: flex-start;
 }
 
 .card-content {
@@ -194,11 +195,35 @@
   overflow: hidden;
 }
 
+/* 标题行 */
+.card-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
 /* 元信息 */
 .card-meta-row {
   display: flex;
   align-items: center;
-  font-size: 12px;
+}
+
+.meta-content {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+/* 卡片分组按钮 */
+.card-group-btn {
+  flex-shrink: 0;
+  padding: 4px 8px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  font-size: 11px;
   color: #999;
 }
 
@@ -329,8 +354,24 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: 16px 20px;
   border-bottom: 1px solid #f0f0f5;
+  position: relative;
+}
+
+.sheet-handle {
+  width: 36px;
+  height: 4px;
+  background: #e0e0e0;
+  border-radius: 2px;
+  margin: 0 auto 12px;
+}
+
+.sheet-action {
+  position: absolute;
+  right: 20px;
+  font-size: 14px;
+  color: #7c3aed;
 }
 
 .sheet-title {
@@ -420,21 +461,86 @@
 }
 
 .group-manager-list {
-  padding: 8px 16px;
+  padding: 0 20px;
   max-height: 50vh;
   overflow-y: auto;
+}
+
+.group-list {
+  padding: 12px 20px;
 }
 
 .group-manager-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 12px;
   padding: 12px 0;
   border-bottom: 1px solid #f5f5f5;
 }
 
 .group-manager-item.empty {
   justify-content: center;
+}
+
+.add-group-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  color: #7c3aed;
+  font-size: 14px;
+  border-top: 1px solid #f0f0f5;
+}
+
+.group-item.empty {
+  justify-content: center;
+}
+
+.empty-tip {
+  font-size: 14px;
+  color: #999;
+}
+
+.group-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #7c3aed;
+  flex-shrink: 0;
+}
+
+.group-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.group-name {
+  font-size: 14px;
+  color: #1a1a2e;
+}
+
+.group-count {
+  font-size: 12px;
+  color: #999;
+}
+
+.group-ops {
+  display: flex;
+  gap: 8px;
+}
+
+.group-op {
+  padding: 4px 10px;
+  font-size: 12px;
+  color: #666;
+  background: #f5f5f5;
+  border-radius: 6px;
+}
+
+.group-op.delete {
+  color: #ef4444;
 }
 
 .manager-info {
