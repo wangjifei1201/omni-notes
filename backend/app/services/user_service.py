@@ -94,15 +94,20 @@ class UserService:
 
     @staticmethod
     async def create_user_by_openid(db: AsyncSession, openid: str, username: str = None) -> User:
-        """通过 openid 创建新用户"""
+        """
+        Create a new user by WeChat openid.
+        """
         if username is None:
-            # 生成默认用户名
             username = f"微信用户_{openid[:8]}"
 
         new_user = User(
+            id=generate_uuid(),
             username=username,
             openid=openid,
             is_guest=False,
+            usage_count=0,
+            created_at=datetime.utcnow(),
+            last_login_at=datetime.utcnow(),
         )
         db.add(new_user)
         await db.commit()
