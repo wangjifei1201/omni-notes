@@ -149,6 +149,13 @@ const authApi = {
       code,  // 新版只需要手机号code
     });
   },
+
+  // 微信 openid 登录
+  wechatLogin: (code) => {
+    return request('POST', '/auth/wechat-login', {
+      code,
+    });
+  },
 };
 
 // ============ Video API ============
