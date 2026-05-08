@@ -12,12 +12,11 @@
     <view class="main-login">
       <button
         class="btn-wechat"
-        open-type="getPhoneNumber"
-        bindgetphonenumber="onGetPhoneNumber"
+        bindtap="onWechatLogin"
         loading="{{isLoading}}"
         disabled="{{isLoading}}"
       >
-        微信手机号登录
+        微信登录
       </button>
 
       <button class="btn-guest" bindtap="onGuestLogin" disabled="{{isLoading}}">

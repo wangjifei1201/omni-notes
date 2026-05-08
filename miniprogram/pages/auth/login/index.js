@@ -13,82 +13,63 @@ Page({
     // 页面加载
   },
 
-  // 微信授权获取手机号（新版API）
-  async onGetPhoneNumber(e) {
-    const { code } = e.detail; // 新版只需要code
-
+  // 微信授权登录（openid 方案）
+  onWechatLogin() {
     // 防止重复点击（2秒内只能点击一次）
     const now = Date.now();
     if (now - this.data.lastClickTime < 2000) {
       console.log('防止重复点击，请稍候再试');
       return;
     }
-    this.setData({ lastClickTime: now });
+    this.setData({ lastClickTime: now, isLoading: true, error: null });
 
-    if (!code) {
-      // 用户取消授权
-      this.setData({ 
-        error: '您取消了授权，请重新点击授权按钮',
-        isLoading: false 
-      });
-      return;
-    }
+    // 调用 wx.login 获取 code
+    wx.login({
+      success: (loginRes) => {
+        if (!loginRes.code) {
+          this.setData({ isLoading: false, error: '获取授权失败，请重试' });
+          return;
+        }
 
-    this.setData({ isLoading: true, error: null });
+        console.log('微信登录 code:', loginRes.code);
 
-    try {
-      console.log('开始微信登录，手机号code:', code);
-      
-      // 调用后端API进行微信授权登录（新版API）
-      const response = await authApi.wechatPhoneLogin(code);
-      
-      console.log('登录成功，响应:', response);
-      
-      // 保存session_id（从响应的cookie或返回值获取）
-      const sessionId = response.session_id || response.id;
-      
-      wx.setStorageSync('auth_token', sessionId);  // 保存session_id
-      wx.setStorageSync('user_id', response.id);   // 保存user_id
-      
-      // 确保user对象有id字段用于登录状态检查
-      store.setUser({
-        id: response.id,
-        phone: response.phone,
-        is_guest: response.is_guest || false,
-        username: response.username
-      });
+        // 发送 code 到后端
+        authApi.wechatLogin(loginRes.code)
+          .then((response) => {
+            console.log('登录成功，响应:', response);
 
-      wx.showToast({
-        title: '登录成功',
-        icon: 'success',
-      });
+            // 保存 session_id
+            const sessionId = response.session_id || response.id;
+            wx.setStorageSync('auth_token', sessionId);
+            wx.setStorageSync('user_id', response.id);
 
-      setTimeout(() => {
-        wx.switchTab({ url: '/pages/index/index' });
-      }, 500);
-    } catch (error) {
-      console.error('登录失败:', error);
-      
-      let errorMsg = '登录失败，请重试';
-      
-      // 根据错误信息提供友好提示
-      if (error.message.includes('授权码已失效') || error.message.includes('invalid code')) {
-        errorMsg = '授权码已失效，请重新点击授权按钮';
-      } else if (error.message.includes('授权码已被使用')) {
-        errorMsg = '授权码已被使用，请重新授权';
-      } else if (error.message.includes('未开通手机号登录权限')) {
-        errorMsg = '小程序未开通手机号登录权限，请联系管理员';
-      } else if (error.message.includes('AppID无效')) {
-        errorMsg = '小程序配置错误，请联系管理员';
-      } else if (error.message.includes('微信登录失败')) {
-        errorMsg = error.message;
+            // 更新全局状态
+            store.setUser({
+              id: response.id,
+              openid: response.openid,
+              is_guest: response.is_guest || false,
+              username: response.username
+            });
+
+            wx.showToast({ title: '登录成功', icon: 'success' });
+
+            setTimeout(() => {
+              wx.switchTab({ url: '/pages/index/index' });
+            }, 500);
+          })
+          .catch((error) => {
+            console.error('登录失败:', error);
+            this.setData({
+              error: error.message || '登录失败，请重试',
+              isLoading: false,
+            });
+          });
+      },
+      fail: (err) => {
+        console.error('wx.login 失败:', err);
+        this.setData({ isLoading: false, error: '微信授权失败，请重试' });
       }
-      
-      this.setData({
-        error: errorMsg,
-        isLoading: false,
-      });
-    }
+    });
   },
 
   // 游客登录
