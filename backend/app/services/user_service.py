@@ -93,6 +93,23 @@ class UserService:
         return user
 
     @staticmethod
+    async def create_user_by_openid(db: AsyncSession, openid: str, username: str = None) -> User:
+        """通过 openid 创建新用户"""
+        if username is None:
+            # 生成默认用户名
+            username = f"微信用户_{openid[:8]}"
+
+        new_user = User(
+            username=username,
+            openid=openid,
+            is_guest=False,
+        )
+        db.add(new_user)
+        await db.commit()
+        await db.refresh(new_user)
+        return new_user
+
+    @staticmethod
     async def get_user_by_username(db: AsyncSession, username: str) -> Optional[User]:
         """
         Get user by username.

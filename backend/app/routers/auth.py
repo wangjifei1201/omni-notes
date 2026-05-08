@@ -452,3 +452,93 @@ async def wechat_phone_login(
         raise HTTPException(status_code=500, detail=f"微信API调用失败: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"登录失败: {str(e)}")
+
+
+@router.post("/wechat-login")
+async def wechat_login(
+    http_request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    微信 openid 授权登录（个人主体小程序方案）
+
+    1. 前端调用 wx.login() 获取 code
+    2. 后端用 code 换 openid
+    3. 用 openid 查找/创建用户
+    """
+    # 获取请求体中的 code
+    try:
+        body = await http_request.json()
+        code = body.get("code")
+    except Exception:
+        raise HTTPException(status_code=400, detail="缺少 code 参数")
+
+    if not code:
+        raise HTTPException(status_code=400, detail="code 不能为空")
+
+    try:
+        # 1. 用 code 换 openid
+        appid = settings.wechat_miniapp_appid
+        secret = settings.wechat_miniapp_secret
+
+        # 调用微信 API 用 code 换 session_key 和 openid
+        token_url = "https://api.weixin.qq.com/sns/jscode2session"
+        token_params = {
+            "appid": appid,
+            "secret": secret,
+            "js_code": code,
+            "grant_type": "authorization_code",
+        }
+
+        token_response = requests.get(token_url, params=token_params, timeout=10)
+        token_data = token_response.json()
+
+        # 检查微信返回的错误
+        if token_data.get("errcode") and token_data["errcode"] != 0:
+            errcode = token_data.get("errcode")
+            errmsg = token_data.get("errmsg", "Unknown error")
+            if errcode == 40029:
+                raise HTTPException(status_code=400, detail="授权码无效，请重新登录")
+            elif errcode == 40127:
+                raise HTTPException(status_code=400, detail="code 已过期，请重新登录")
+            else:
+                raise HTTPException(status_code=400, detail=f"微信登录失败: {errmsg}")
+
+        openid = token_data.get("openid")
+        if not openid:
+            raise HTTPException(status_code=500, detail="未能获取用户标识")
+
+        # 2. 用 openid 查找用户
+        stmt = select(User).where(User.openid == openid)
+        result = await db.execute(stmt)
+        user = result.scalar_one_or_none()
+
+        if user:
+            # 已存在用户，更新登录时间
+            await UserService.update_last_login(db, user.id)
+            await db.commit()
+        else:
+            # 创建新用户
+            user = await UserService.create_user_by_openid(db, openid=openid)
+
+        # 3. 创建 session
+        session = await SessionService.create_session(db, user.id)
+
+        # 4. 设置 cookie
+        set_session_cookie(response, session.id)
+
+        return {
+            "id": user.id,
+            "openid": user.openid,
+            "username": user.username,
+            "is_guest": user.is_guest,
+            "session_id": session.id,
+        }
+
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"微信服务异常，请稍后重试")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"登录失败: {str(e)}")
