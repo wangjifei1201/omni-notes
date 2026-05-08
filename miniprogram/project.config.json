@@ -41,8 +41,8 @@
     }
   },
   "compileType": "miniprogram",
-  "libVersion": "3.4.2",
-  "appid": "wx4362fac7e5d92795",
+  "libVersion": "3.15.2",
+  "appid": "wx6191df2db159a129",
   "projectname": "omni-notes",
   "condition": {
     "search": {

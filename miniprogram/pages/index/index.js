@@ -79,6 +79,10 @@ Page({
     this.setData({ showAuthModal: false, isLoggedIn: true });
   },
 
+  onWechatLogin() {
+    wx.navigateTo({ url: '/pages/auth/login/index' });
+  },
+
   onCloseAuthModal() {
     this.setData({ showAuthModal: false });
   },
