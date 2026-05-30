@@ -351,6 +351,16 @@ async def wechat_login(
 
         token_response = requests.get(token_url, params=token_params, timeout=10)
         token_data = token_response.json()
+        if token_data.get("errcode"):
+            print(
+                "[wechat-login] jscode2session failed: "
+                f"appid={appid}, "
+                f"secret_set={bool(secret)}, "
+                f"code_len={len(code)}, "
+                f"code_prefix={code[:6]}, "
+                f"errcode={token_data.get('errcode')}, "
+                f"errmsg={token_data.get('errmsg')}"
+            )
 
         # 检查微信返回的错误
         if token_data.get("errcode") and token_data["errcode"] != 0:

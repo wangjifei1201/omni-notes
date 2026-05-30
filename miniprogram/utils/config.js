@@ -8,14 +8,24 @@ const ENV = {
   PROD: 'production',
 };
 
-// 当前环境 (开发时改为 ENV.DEV，上线时改为 ENV.PROD)
-const currentEnv = ENV.PROD;
-
 // API 地址配置
 const API_URLS = {
-  [ENV.DEV]: 'http://192.168.1.163:8000/api/v1',      // 本地开发（局域网IP）
+  [ENV.DEV]: 'http://192.168.1.30:8000/api/v1',      // 本地真机调试（Mac 局域网 IP）
   [ENV.PROD]: 'https://wangxiyue.cloud/api/v1',   // 生产环境
 };
+
+// 根据小程序版本自动选择环境：上传后的正式版连接生产，开发/预览/真机调试连接本地
+function getCurrentEnv() {
+  try {
+    const accountInfo = wx.getAccountInfoSync();
+    const envVersion = accountInfo.miniProgram.envVersion;
+    return envVersion === 'release' ? ENV.PROD : ENV.DEV;
+  } catch (e) {
+    return ENV.DEV;
+  }
+}
+
+const currentEnv = getCurrentEnv();
 
 // 导出配置
 module.exports = {
