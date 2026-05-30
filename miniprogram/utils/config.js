@@ -19,7 +19,7 @@ function getCurrentEnv() {
   try {
     const accountInfo = wx.getAccountInfoSync();
     const envVersion = accountInfo.miniProgram.envVersion;
-    return envVersion === 'release' ? ENV.PROD : ENV.DEV;
+    return envVersion === 'develop' ? ENV.DEV : ENV.PROD;
   } catch (e) {
     return ENV.DEV;
   }
