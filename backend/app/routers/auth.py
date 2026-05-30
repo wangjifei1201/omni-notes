@@ -62,6 +62,7 @@ def set_session_cookie(response: Response, session_id: str) -> None:
         httponly=True,
         secure=False,  # Set to True in production with HTTPS
         samesite="lax",
+        domain=".wangxiyue.cloud",
         max_age=settings.session_expire_days * 24 * 60 * 60,
         path="/",
     )
