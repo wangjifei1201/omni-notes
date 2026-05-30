@@ -54,45 +54,6 @@ class UserService:
         return user
 
     @staticmethod
-    async def create_user_by_phone(
-        db: AsyncSession, phone: str, openid: str, username: str
-    ) -> User:
-        """
-        Create a new user by phone number (WeChat login).
-
-        Args:
-            db: Database session
-            phone: Phone number
-            openid: WeChat openid
-            username: Username
-
-        Returns:
-            Created User instance
-        """
-        # Generate a random password for WeChat users
-        random_password = "".join(
-            random.choices(string.ascii_letters + string.digits, k=32)
-        )
-
-        user = User(
-            id=generate_uuid(),
-            username=username,
-            password_hash=hash_password(random_password),
-            phone=phone,
-            openid=openid,
-            is_guest=False,
-            usage_count=0,
-            created_at=datetime.utcnow(),
-            last_login_at=datetime.utcnow(),
-        )
-
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
-
-        return user
-
-    @staticmethod
     async def create_user_by_openid(db: AsyncSession, openid: str, username: str = None) -> User:
         """
         Create a new user by WeChat openid.
@@ -103,6 +64,7 @@ class UserService:
         new_user = User(
             id=generate_uuid(),
             username=username,
+            password_hash=hash_password(generate_uuid()),
             openid=openid,
             is_guest=False,
             usage_count=0,

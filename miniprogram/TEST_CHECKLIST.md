@@ -19,11 +19,12 @@
    ✓ Storage 中保存了 user_id 和 auth_token
    ✓ 首页显示已登录状态（隐藏授权弹窗）
 
-测试场景 2: 微信授权登录
+测试场景 2: 微信 openid 登录
 1. 打开小程序
-2. 点击"微信授权登录"按钮
-3. 授权获取手机号
-4. 验证：
+2. 点击“微信登录”
+3. 小程序调用 `wx.login()` 获取 code
+4. 后端 `/api/v1/auth/wechat-login` 使用 code 换取 openid
+5. 验证：
    ✓ 显示"登录成功"提示
    ✓ 自动跳转到首页
    ✓ Storage 中保存了 user_id 和 auth_token

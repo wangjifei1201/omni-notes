@@ -40,7 +40,7 @@
 - ✅ 登出功能
 
 ### 5. 登录页 (pages/auth/login/index.js)
-- ✅ 微信授权登录（新版 API）
+- ✅ 微信 openid 登录
 - ✅ 游客登录
 - ✅ 错误提示和重试机制
 - ✅ 防止重复点击
@@ -69,7 +69,7 @@ const API_URLS = {
 ### 1. 登录测试
 ```
 1. 打开小程序
-2. 点击"微信授权登录"或"游客登录"
+2. 点击"微信登录"或"游客登录"
 3. 验证登录成功，跳转到首页
 4. 检查 Storage 中是否保存了 auth_token 和 user_id
 ```
@@ -140,11 +140,11 @@ const API_URLS = {
 4. 查看浏览器控制台的错误信息
 
 ### 问题 2: 登录失败
-**原因**: 微信授权失败或后端认证问题
+**原因**: 微信 openid 登录失败或后端认证问题
 
 **解决方案**:
-1. 确保小程序已配置微信授权权限
-2. 检查后端 `/auth/wechat-phone-login` 接口
+1. 确保小程序可正常调用 `wx.login()`
+2. 检查后端 `/auth/wechat-login` 接口
 3. 查看错误提示信息
 4. 尝试游客登录
 
@@ -195,7 +195,7 @@ store.getState()  // 查看当前应用状态
 
 | 功能 | 方法 | 端点 | 状态 |
 |------|------|------|------|
-| 微信登录 | POST | `/auth/wechat-phone-login` | ✅ |
+| 微信 openid 登录 | POST | `/auth/wechat-login` | ✅ |
 | 游客登录 | POST | `/auth/guest` | ✅ |
 | 登出 | POST | `/auth/logout` | ✅ |
 | 创建分析 | POST | `/analysis` | ✅ |

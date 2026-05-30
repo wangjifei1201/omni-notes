@@ -128,28 +128,6 @@ const authApi = {
     });
   },
 
-  // 发送手机号验证码
-  sendPhoneCode: (phone) => {
-    return request('POST', '/auth/send-phone-code', {
-      phone,
-    });
-  },
-
-  // 手机号验证码登录
-  phoneLogin: (phone, code) => {
-    return request('POST', '/auth/phone-login', {
-      phone,
-      code,
-    });
-  },
-
-  // 微信授权登录（新版API）
-  wechatPhoneLogin: (code) => {
-    return request('POST', '/auth/wechat-phone-login', {
-      code,  // 新版只需要手机号code
-    });
-  },
-
   // 微信 openid 登录
   wechatLogin: (code) => {
     return request('POST', '/auth/wechat-login', {

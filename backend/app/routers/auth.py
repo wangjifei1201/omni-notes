@@ -2,34 +2,27 @@
 Authentication router for user registration, login, logout, and guest mode.
 """
 
-from datetime import datetime
-from typing import Optional
 import requests
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.dependencies import (
     get_db,
-    get_current_user,
     require_auth,
     verify_user_credentials,
 )
 from app.models.schemas import (
     UserCreate,
-    UserLogin,
     UserResponse,
     GuestUserResponse,
-    ErrorResponse,
 )
 from app.models.user import User
 from app.services.user_service import UserService
 from app.services.session_service import SessionService
 from app.utils.validators import validate_username, validate_password
-from app.utils.wechat_decrypt import WeChatDecrypt, WeChatDecryptError
 from app.config import settings
 
 
@@ -317,141 +310,6 @@ async def change_password(
         raise HTTPException(status_code=400, detail=str(e))
 
     return {"success": True, "message": "密码修改成功"}
-
-
-class WeChatPhoneLoginRequest(BaseModel):
-    """微信手机号授权登录请求（新版API）"""
-
-    code: str  # 手机号授权code
-
-
-class WeChatPhoneLoginResponse(BaseModel):
-    """微信手机号授权登录响应"""
-
-    id: str
-    phone: Optional[str] = None
-    is_guest: bool = False
-    username: Optional[str] = None
-    usage_count: int = 0
-    session_id: Optional[str] = None  # 添加session_id字段
-
-
-@router.post("/wechat-phone-login", response_model=WeChatPhoneLoginResponse)
-async def wechat_phone_login(
-    request: WeChatPhoneLoginRequest,
-    http_request: Request,
-    response: Response,
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    微信手机号授权登录（新版API）
-
-    使用微信新版手机号快速验证API（无需解密）
-    https://developers.weixin.qq.com/miniprogram/dev/OpenApiDoc/user-info/phone-number/getPhoneNumber.html
-    """
-    try:
-        # 1. 调用微信新版API直接获取手机号（无需解密）
-        # 先获取access_token
-        token_url = "https://api.weixin.qq.com/cgi-bin/token"
-        token_params = {
-            "grant_type": "client_credential",
-            "appid": settings.wechat_miniapp_appid,
-            "secret": settings.wechat_miniapp_secret,
-        }
-
-        token_response = requests.get(token_url, params=token_params, timeout=10)
-        token_data = token_response.json()
-
-        if token_data.get("errcode"):
-            raise HTTPException(
-                status_code=500,
-                detail=f"获取access_token失败: {token_data.get('errmsg', 'Unknown error')}",
-            )
-
-        access_token = token_data["access_token"]
-
-        # 2. 使用手机号code获取手机号信息
-        phone_url = "https://api.weixin.qq.com/wxa/business/getuserphonenumber"
-        phone_params = {
-            "code": request.code  # 手机号授权code
-        }
-
-        phone_response = requests.post(
-            phone_url,
-            params={"access_token": access_token},
-            json=phone_params,
-            timeout=10,
-        )
-        phone_data = phone_response.json()
-
-        # 检查微信API错误
-        if phone_data.get("errcode") and phone_data["errcode"] != 0:
-            error_code = phone_data.get("errcode")
-            error_msg = phone_data.get("errmsg", "Unknown error")
-
-            # 根据错误码提供友好提示
-            if error_code == 40029:
-                raise HTTPException(status_code=400, detail="授权码已失效，请重新授权")
-            elif error_code == 40163:
-                raise HTTPException(
-                    status_code=400, detail="授权码已被使用，请重新授权"
-                )
-            elif error_code == 40013:
-                raise HTTPException(status_code=400, detail="AppID无效，请检查配置")
-            elif error_code == 48001:
-                raise HTTPException(
-                    status_code=400, detail="小程序未开通手机号登录权限"
-                )
-            else:
-                raise HTTPException(
-                    status_code=400, detail=f"微信登录失败: {error_msg}"
-                )
-
-        # 3. 获取手机号信息
-        phone_info = phone_data.get("phone_info", {})
-        phone = phone_info.get("purePhoneNumber")
-        openid = phone_info.get("openid")  # 新版API也返回openid
-
-        if not phone:
-            raise HTTPException(status_code=400, detail="未能获取手机号信息")
-
-        # 4. 查找或创建用户
-        stmt = select(User).where(User.phone == phone)
-        result = await db.execute(stmt)
-        user = result.scalar_one_or_none()
-
-        if user:
-            # 已存在用户，更新openid和登录时间
-            if openid and not user.openid:
-                user.openid = openid
-            await UserService.update_last_login(db, user.id)
-            await db.commit()
-        else:
-            # 创建新用户
-            username = f"微信用户_{phone}"
-            user = await UserService.create_user_by_phone(
-                db, phone=phone, openid=openid or "", username=username
-            )
-
-        # 5. 创建 session
-        session = await SessionService.create_session(db, user.id)
-
-        # 6. 设置 cookie
-        set_session_cookie(response, session.id)
-
-        return WeChatPhoneLoginResponse(
-            id=user.id,
-            phone=user.phone,
-            is_guest=user.is_guest,
-            username=user.username,
-            usage_count=user.usage_count,
-            session_id=session.id,  # 返回session_id供小程序使用
-        )
-
-    except requests.RequestException as e:
-        raise HTTPException(status_code=500, detail=f"微信API调用失败: {str(e)}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"登录失败: {str(e)}")
 
 
 @router.post("/wechat-login")
