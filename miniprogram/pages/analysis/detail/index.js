@@ -66,6 +66,8 @@ Page({
     keypoints: [],
     chapters: [],
     mindmap: '',
+    mindmapCanvasWidth: 360,
+    mindmapCanvasHeight: 220,
     fullAnalysis: '',
 
     // 分组相关数据
@@ -111,6 +113,8 @@ Page({
       currentStep: 'extract',
       currentMessage: '准备开始...',
       activeTab: 'summary',
+      mindmapCanvasWidth: 360,
+      mindmapCanvasHeight: 220,
       stepStatus: { extract: 'pending', download: 'pending', transcribe: 'pending', analyze: 'pending' },
       elapsedTime: 0,
       elapsedTimeFormat: '00:00',
@@ -364,6 +368,7 @@ Page({
       // 构建 wxml 所需的 analysis 对象
       const analysis = this.buildAnalysisObject(result, keypoints, mindmap);
       analysis.mindmapTree = mindmapTree;
+      const mindmapLayout = this.calculateMindmapLayout(mindmapTree);
 
       // 获取状态文本
       let statusText = '准备中';
@@ -389,6 +394,8 @@ Page({
         keypoints: keypoints,
         chapters: chapters,
         mindmap: mindmap,
+        mindmapCanvasWidth: mindmapLayout.width,
+        mindmapCanvasHeight: mindmapLayout.height,
         fullAnalysis: fullAnalysis,
         isLoading: false,
       });
@@ -890,6 +897,29 @@ Page({
   // 复制摘要
   onCopySummary() {
     this.onCopyResult({ currentTarget: { dataset: { field: 'summary' } } });
+  },
+
+  // 根据导图内容估算画布尺寸：高度展开完整内容，只保留横向滚动
+  calculateMindmapLayout(mindmapTree) {
+    if (!mindmapTree || !Array.isArray(mindmapTree.branches) || mindmapTree.branches.length === 0) {
+      return { width: 360, height: 220 };
+    }
+
+    const branchCount = mindmapTree.branches.length;
+    const maxItems = mindmapTree.branches.reduce((max, branch) => {
+      const count = Array.isArray(branch.items) ? branch.items.length : 0;
+      return Math.max(max, count);
+    }, 0);
+
+    const width = 18 + 150 + 36 + 24 + 150 + (maxItems > 0 ? 24 + 150 : 0) + 18;
+    const contentHeight = mindmapTree.branches.reduce((total, branch, index) => {
+      const itemCount = Array.isArray(branch.items) ? branch.items.length : 0;
+      const branchHeight = Math.max(46, itemCount > 0 ? itemCount * 42 + Math.max(itemCount - 1, 0) * 8 : 46);
+      return total + branchHeight + (index === branchCount - 1 ? 0 : 14);
+    }, 0);
+    const height = 24 + Math.max(64, contentHeight) + 32;
+
+    return { width, height };
   },
 
   // 全屏查看思维导图

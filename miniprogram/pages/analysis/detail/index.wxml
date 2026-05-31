@@ -289,12 +289,12 @@
             </button>
           </view>
           <view class="mindmap-content" wx:if="{{analysis.mindmapTree}}">
-            <view class="mindmap-canvas">
-              <view class="mindmap-root-node">
-                <text>{{analysis.mindmapTree.root}}</text>
-              </view>
-              <view class="mindmap-trunk"></view>
-              <scroll-view class="mindmap-scroll" scroll-x="true" enhanced="true" show-scrollbar="false">
+            <scroll-view class="mindmap-scroll" scroll-x="true" enhanced="true" show-scrollbar="false" style="height: {{mindmapCanvasHeight}}px;">
+              <view class="mindmap-canvas" style="width: {{mindmapCanvasWidth}}px; height: {{mindmapCanvasHeight}}px;">
+                <view class="mindmap-root-node">
+                  <text>{{analysis.mindmapTree.root}}</text>
+                </view>
+                <view class="mindmap-trunk"></view>
                 <view class="mindmap-branches">
                   <view class="mindmap-branch-wrap" wx:for="{{analysis.mindmapTree.branches}}" wx:key="index">
                     <view class="branch-line"></view>
@@ -309,8 +309,8 @@
                     </view>
                   </view>
                 </view>
-              </scroll-view>
-            </view>
+              </view>
+            </scroll-view>
           </view>
           <view class="empty-panel" wx:else>
             <text class="empty-icon">◈</text>
