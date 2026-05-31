@@ -289,22 +289,27 @@
             </button>
           </view>
           <view class="mindmap-content" wx:if="{{analysis.mindmapTree}}">
-            <view class="mindmap-root">
-              <text>{{analysis.mindmapTree.root}}</text>
-            </view>
-            <view class="mindmap-branches">
-              <view class="mindmap-branch" wx:for="{{analysis.mindmapTree.branches}}" wx:key="index">
-                <view class="branch-title-row">
-                  <view class="branch-dot"></view>
-                  <text class="branch-title">{{item.title}}</text>
-                </view>
-                <view class="branch-items" wx:if="{{item.items && item.items.length > 0}}">
-                  <view class="branch-item" wx:for="{{item.items}}" wx:for-item="subItem" wx:for-index="subIndex" wx:key="*this">
-                    <text class="item-dot">•</text>
-                    <text class="item-text">{{subItem}}</text>
+            <view class="mindmap-canvas">
+              <view class="mindmap-root-node">
+                <text>{{analysis.mindmapTree.root}}</text>
+              </view>
+              <view class="mindmap-trunk"></view>
+              <scroll-view class="mindmap-scroll" scroll-x="true" enhanced="true" show-scrollbar="false">
+                <view class="mindmap-branches">
+                  <view class="mindmap-branch-wrap" wx:for="{{analysis.mindmapTree.branches}}" wx:key="index">
+                    <view class="branch-line"></view>
+                    <view class="mindmap-branch">
+                      <text class="branch-title">{{item.title}}</text>
+                    </view>
+                    <view class="branch-items" wx:if="{{item.items && item.items.length > 0}}">
+                      <view class="item-line"></view>
+                      <view class="branch-item" wx:for="{{item.items}}" wx:for-item="subItem" wx:for-index="subIndex" wx:key="*this">
+                        <text class="item-text">{{subItem}}</text>
+                      </view>
+                    </view>
                   </view>
                 </view>
-              </view>
+              </scroll-view>
             </view>
           </view>
           <view class="empty-panel" wx:else>
