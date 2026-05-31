@@ -285,16 +285,27 @@
             </view>
             <text class="panel-title">思维导图</text>
             <button class="expand-btn" bindtap="onExpandMindmap">
-              <text>全屏查看</text>
+              <text>复制导图</text>
             </button>
           </view>
-          <view class="mindmap-content" wx:if="{{analysis.mindmap}}">
-            <image
-              class="mindmap-image"
-              src="{{analysis.mindmap}}"
-              mode="widthFix"
-              bindtap="onPreviewMindmap"
-            />
+          <view class="mindmap-content" wx:if="{{analysis.mindmapTree}}">
+            <view class="mindmap-root">
+              <text>{{analysis.mindmapTree.root}}</text>
+            </view>
+            <view class="mindmap-branches">
+              <view class="mindmap-branch" wx:for="{{analysis.mindmapTree.branches}}" wx:key="index">
+                <view class="branch-title-row">
+                  <view class="branch-dot"></view>
+                  <text class="branch-title">{{item.title}}</text>
+                </view>
+                <view class="branch-items" wx:if="{{item.items && item.items.length > 0}}">
+                  <view class="branch-item" wx:for="{{item.items}}" wx:for-item="subItem" wx:for-index="subIndex" wx:key="*this">
+                    <text class="item-dot">•</text>
+                    <text class="item-text">{{subItem}}</text>
+                  </view>
+                </view>
+              </view>
+            </view>
           </view>
           <view class="empty-panel" wx:else>
             <text class="empty-icon">◈</text>

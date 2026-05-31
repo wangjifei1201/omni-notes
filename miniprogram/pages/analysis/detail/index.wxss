@@ -476,14 +476,84 @@
   border: 1px solid rgba(0, 0, 0, 0.04);
   border-radius: 16px;
   padding: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
-.mindmap-image {
-  width: 100%;
-  border-radius: 12px;
+.mindmap-root {
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+  text-align: center;
+  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.18);
+}
+
+.mindmap-root text {
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.mindmap-branches {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mindmap-branch {
+  background: #ffffff;
+  border: 1px solid rgba(124, 58, 237, 0.08);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.branch-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.branch-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #7c3aed;
+  flex-shrink: 0;
+}
+
+.branch-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a2e;
+  line-height: 1.4;
+}
+
+.branch-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 16px;
+}
+
+.branch-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.item-dot {
+  color: #7c3aed;
+  font-size: 14px;
+  line-height: 1.5;
+  flex-shrink: 0;
+}
+
+.item-text {
+  flex: 1;
+  font-size: 13px;
+  color: #6b6b7e;
+  line-height: 1.5;
 }
 
 /* 字幕内容 */

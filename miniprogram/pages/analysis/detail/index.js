@@ -28,6 +28,7 @@ Page({
       summary: '',
       keypoints: [],
       mindmap: '',
+      mindmapTree: null,
       transcript: null,
       group_id: null,
       group_name: '',
@@ -99,6 +100,7 @@ Page({
 
     // 设置当前任务ID（实例变量，不受 setData 影响）
     this.currentTaskId = taskId;
+    this._taskStartTime = null;
 
     // 更新页面数据
     this.setData({
@@ -272,6 +274,7 @@ Page({
         timestamp: item.timestamp || '',
       })),
       mindmap: mindmap,
+      mindmapTree: this.normalizeMindmap(mindmap),
       transcript: transcript,
       group_id: result.group_id || null,
       group_name: result.group_name || '',
@@ -326,14 +329,9 @@ Page({
       }
 
       // 处理思维导图 - 后端返回的是对象
-      let mindmap = '';
-      if (analysisResult.mindmap) {
-        if (typeof analysisResult.mindmap === 'string') {
-          mindmap = analysisResult.mindmap;
-        } else if (typeof analysisResult.mindmap === 'object') {
-          mindmap = this.formatMindmap(analysisResult.mindmap);
-        }
-      }
+      const rawMindmap = analysisResult.mindmap || null;
+      const mindmapTree = this.normalizeMindmap(rawMindmap);
+      const mindmap = mindmapTree ? this.formatMindmap(mindmapTree) : '';
 
       // 处理章节 - 保留完整对象（标题 + 内容）
       let chapters = [];
@@ -365,6 +363,7 @@ Page({
 
       // 构建 wxml 所需的 analysis 对象
       const analysis = this.buildAnalysisObject(result, keypoints, mindmap);
+      analysis.mindmapTree = mindmapTree;
 
       // 获取状态文本
       let statusText = '准备中';
@@ -411,6 +410,57 @@ Page({
     }
   },
 
+  // 将后端导图统一为小程序可渲染的树结构
+  normalizeMindmap(mindmapObj) {
+    if (!mindmapObj) return null;
+
+    if (typeof mindmapObj === 'string') {
+      const text = mindmapObj.trim();
+      return text ? { root: '思维导图', branches: [{ title: '内容', items: [text] }] } : null;
+    }
+
+    if (Array.isArray(mindmapObj)) {
+      const branches = mindmapObj.map((node, index) => this.normalizeMindmapBranch(node, `分支 ${index + 1}`)).filter(Boolean);
+      return branches.length ? { root: '思维导图', branches } : null;
+    }
+
+    if (typeof mindmapObj !== 'object') return null;
+
+    const root = mindmapObj.root || mindmapObj.title || mindmapObj.text || mindmapObj.centralTopic
+      || mindmapObj.central_topic || mindmapObj.mainTopic || mindmapObj.main_topic || '思维导图';
+    const rawBranches = mindmapObj.branches || mindmapObj.children || mindmapObj.nodes || mindmapObj.items || [];
+    const branches = Array.isArray(rawBranches)
+      ? rawBranches.map((branch, index) => this.normalizeMindmapBranch(branch, `分支 ${index + 1}`)).filter(Boolean)
+      : [];
+
+    return branches.length ? { root: String(root), branches } : null;
+  },
+
+  // 统一单个导图分支结构
+  normalizeMindmapBranch(branch, fallbackTitle) {
+    if (!branch) return null;
+
+    if (typeof branch === 'string') {
+      return { title: branch, items: [] };
+    }
+
+    if (typeof branch !== 'object') {
+      return { title: String(branch), items: [] };
+    }
+
+    const title = branch.title || branch.text || branch.name || branch.label || branch.topic || fallbackTitle;
+    const rawItems = branch.items || branch.children || branch.nodes || branch.subtopics || branch.subNodes || [];
+    const items = Array.isArray(rawItems)
+      ? rawItems.map((item) => {
+        if (typeof item === 'string') return item;
+        if (!item || typeof item !== 'object') return String(item || '');
+        return item.title || item.text || item.name || item.label || item.topic || item.content || '';
+      }).filter(Boolean)
+      : [];
+
+    return { title: String(title), items };
+  },
+
   // 格式化思维导图为 Markdown 有序列表格式
   formatMindmap(mindmapObj) {
     if (!mindmapObj) return '';
@@ -423,7 +473,17 @@ Page({
       if (typeof mindmapObj === 'object') {
         let result = '';
 
-        if (mindmapObj.root) {
+        if (mindmapObj.root && Array.isArray(mindmapObj.branches)) {
+          result = `1. ${mindmapObj.root}\n`;
+          mindmapObj.branches.forEach((branch, index) => {
+            result += `   1.${index + 1}. ${branch.title}\n`;
+            if (branch.items && Array.isArray(branch.items)) {
+              branch.items.forEach((item, itemIndex) => {
+                result += `      1.${index + 1}.${itemIndex + 1}. ${item}\n`;
+              });
+            }
+          });
+        } else if (mindmapObj.root) {
           result = this.formatMindmapToMarkdown(mindmapObj.root, 0);
         } else if (mindmapObj.centralTopic || mindmapObj.central_topic) {
           const central = mindmapObj.centralTopic || mindmapObj.central_topic;
@@ -541,9 +601,13 @@ Page({
     const taskStatus = result.status || result.state || 'pending';
 
     // 如果任务开始执行，启动计时器
-    if ((taskStatus === 'running' || taskStatus === 'processing') && !this.timerInterval) {
-      this._taskStartTime = Date.now();
-      this.startTimer();
+    if (taskStatus === 'running' || taskStatus === 'processing') {
+      if (!this._taskStartTime) {
+        this._taskStartTime = Date.now() - (this.data.elapsedTime || 0) * 1000;
+      }
+      if (!this.timerInterval) {
+        this.startTimer();
+      }
     }
 
     // 计算步骤名称
@@ -606,10 +670,8 @@ Page({
         overallProgress = 30;
         currentStep = 'download';
         if (downloadProgress !== null) {
-          let msg = `正在下载视频... ${downloadProgress}%`;
-          if (downloadSpeed) msg += ` (${downloadSpeed})`;
-          if (downloadText) msg += ` ${downloadText}`;
-          currentMessage = msg;
+          currentMessage = downloadText ? `正在下载视频... ${downloadText}` : `正在下载视频... ${downloadProgress}%`;
+          if (!downloadText && downloadSpeed) currentMessage += ` (${downloadSpeed})`;
         } else {
           currentMessage = '正在下载视频...';
         }
@@ -832,14 +894,18 @@ Page({
 
   // 全屏查看思维导图
   onExpandMindmap() {
-    const mindmapUrl = this.data.mindmap || this.data.analysis.mindmap;
-    if (mindmapUrl && mindmapUrl.startsWith('http')) {
-      wx.previewImage({
-        urls: [mindmapUrl],
-      });
-    } else {
-      wx.showToast({ title: '暂无可预览的导图', icon: 'none' });
+    const mindmapText = this.data.mindmap || this.data.analysis.mindmap;
+    if (!mindmapText) {
+      wx.showToast({ title: '暂无可查看的导图', icon: 'none' });
+      return;
     }
+
+    wx.setClipboardData({
+      data: mindmapText,
+      success: () => {
+        wx.showToast({ title: '导图文本已复制', icon: 'success' });
+      },
+    });
   },
 
   // 预览思维导图
