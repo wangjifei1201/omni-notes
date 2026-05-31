@@ -31,3 +31,4 @@ config.json
 # Environment variables
 .env
 backend/.env
+.claude/settings.local.json
