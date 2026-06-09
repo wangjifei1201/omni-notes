@@ -1,13 +1,35 @@
-/data/
-/node_modules/
-config.json
-server.log
+# Dependencies
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+
+# Data (runtime generated)
+data/
+
+# Database (Docker volume)
+postgres_data/
+
+# Logs
+*.log
+
+# IDE
 .vscode/mcp.json
-test-results/group-分组功能测试-创建分组-chromium/error-context.md
-test-results/group-分组功能测试-创建分组-chromium/test-failed-1.png
-test-results/group-分组功能测试-删除分组-chromium/error-context.md
-test-results/group-分组功能测试-删除分组-chromium/test-failed-1.png
-test-results/group-分组功能测试-编辑分组-chromium/error-context.md
-test-results/group-分组功能测试-编辑分组-chromium/test-failed-1.png
-server.log
-__pycache__/whisper_stream.cpython-38.pyc
+
+# Config (may contain secrets)
+config.json
+
+# OS
+.DS_Store
+
+# Tool configs (auto-managed)
+.gstack/
+.kilo/
+# Environment variables
+.env
+backend/.env
+.claude/settings.local.json
+*/__pycache__/*.pyc

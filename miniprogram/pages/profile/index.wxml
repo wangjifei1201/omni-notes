@@ -1,0 +1,85 @@
+<!--pages/profile/index.wxml - 个人中心页-->
+<view class="page-container">
+  <!-- 顶部导航 -->
+  <view class="nav-header">
+    <text class="page-title">我的</text>
+  </view>
+
+  <!-- 内容区 -->
+  <scroll-view class="content-area" scroll-y="true" enhanced="true" show-scrollbar="false">
+    <!-- 用户信息卡片 -->
+    <view class="user-card">
+      <view class="user-main">
+        <view class="avatar-wrap">
+          <view class="avatar">O</view>
+        </view>
+        <view class="user-info">
+          <text class="user-name">{{userInfo.nickName || '游客用户'}}</text>
+        </view>
+      </view>
+
+      <!-- 用户统计 -->
+      <view class="user-stats">
+        <view class="stat-item">
+          <text class="stat-num">{{userStats.analysisCount}}</text>
+          <text class="stat-label">分析次数</text>
+        </view>
+        <view class="stat-item">
+          <text class="stat-num">{{userStats.daysJoined || 0}}</text>
+          <text class="stat-label">使用天数</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 关于与帮助 -->
+    <view class="section-card">
+      <view class="menu-list">
+        <view class="menu-item" bindtap="onGoHelp">
+          <view class="item-left">
+            <view class="item-icon">?</view>
+            <view class="item-info">
+              <text class="item-title">使用帮助</text>
+            </view>
+          </view>
+          <view class="item-right">
+            <text class="arrow">›</text>
+          </view>
+        </view>
+
+        <view class="menu-item" bindtap="onGoAbout">
+          <view class="item-left">
+            <view class="item-icon">i</view>
+            <view class="item-info">
+              <text class="item-title">关于 Omni-Notes</text>
+              <text class="item-desc">v{{appVersion}}</text>
+            </view>
+          </view>
+          <view class="item-right">
+            <text class="arrow">›</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 账号操作 -->
+    <view class="section-card logout-card">
+      <view class="menu-list">
+        <view class="menu-item logout-item" bindtap="onLogout">
+          <view class="item-left">
+            <view class="item-icon logout-icon">⎋</view>
+            <view class="item-info">
+              <text class="item-title logout-title">退出登录</text>
+              <text class="item-desc">清除当前账号登录状态</text>
+            </view>
+          </view>
+          <view class="item-right">
+            <text class="arrow">›</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 底部留白 -->
+    <view class="bottom-spacer"></view>
+  </scroll-view>
+</view>

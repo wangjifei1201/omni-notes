@@ -1,0 +1,55 @@
+<!--pages/auth/login/index.wxml-->
+<view class="container">
+  <view class="content">
+    <view class="logo">🎬</view>
+    <view class="title">Omni-Notes</view>
+    <view class="subtitle">AI视频分析助手</view>
+
+    <!-- 错误提示 -->
+    <view class="error-message" wx:if="{{error}}">{{error}}</view>
+
+    <!-- 主要登录按钮 -->
+    <view class="main-login">
+      <button
+        class="btn-wechat"
+        bindtap="onWechatLogin"
+        loading="{{isLoading}}"
+        disabled="{{isLoading}}"
+      >
+        微信登录
+      </button>
+
+      <button class="btn-guest" bindtap="onGuestLogin" disabled="{{isLoading}}">
+        游客模式
+      </button>
+    </view>
+
+    <!-- 次要登录方式 -->
+    <view class="other-login">
+      <view class="divider">
+        <view class="line"></view>
+        <text class="text">或</text>
+        <view class="line"></view>
+      </view>
+
+      <view class="link" bindtap="onEmailLogin">
+        使用邮箱注册/登录
+      </view>
+    </view>
+
+    <!-- 用户协议 -->
+    <view class="agreement">
+      <checkbox-group bindchange="onAgreementChange">
+        <view class="agreement-label">
+          <checkbox class="agreement-checkbox" value="accepted" checked="{{acceptedAgreement}}" color="#7c3aed" />
+          <view class="agreement-text">
+            <text>我已阅读并同意</text>
+            <text class="link" catchtap="openUserAgreement">《用户服务协议》</text>
+            <text>及</text>
+            <text class="link" catchtap="openPrivacyPolicy">《隐私政策》</text>
+          </view>
+        </view>
+      </checkbox-group>
+    </view>
+  </view>
+</view>

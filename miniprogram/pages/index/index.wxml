@@ -1,0 +1,111 @@
+<!--pages/index/index.wxml - Omni-Notes 首页 -->
+<view class="page-container">
+  <!-- 顶部品牌区 -->
+  <view class="brand-header">
+    <view class="brand-left">
+      <view class="brand-logo">O</view>
+      <view class="brand-info">
+        <text class="brand-name">Omni-Notes</text>
+        <text class="brand-slogan">AI 视频笔记</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 主内容区 -->
+  <scroll-view class="main-scroll" scroll-y="true" enhanced="true" show-scrollbar="false">
+    <!-- 输入区域 -->
+    <view class="input-section">
+      <view class="section-title">
+        <text class="main-title">粘贴视频链接</text>
+        <text class="sub-title">AI 智能分析，一键生成笔记</text>
+      </view>
+
+      <view class="url-input-wrap">
+        <view class="url-input-box {{focused ? 'focused' : ''}}">
+          <text class="input-icon">+</text>
+          <input
+            class="url-input"
+            type="text"
+            placeholder="https://www.bilibili.com/video/BV..."
+            placeholder-class="input-placeholder"
+            value="{{videoUrl}}"
+            bindinput="onUrlInput"
+            bindfocus="onFocus"
+            bindblur="onBlur"
+          />
+        </view>
+      </view>
+
+      <view class="platform-tags">
+        <view class="tag-item bilibili">
+          <text class="tag-icon">B</text>
+          <text class="tag-name">B站</text>
+        </view>
+        <view class="tag-item douyin">
+          <text class="tag-icon">D</text>
+          <text class="tag-name">抖音</text>
+        </view>
+      </view>
+
+      <button class="start-btn {{videoUrl ? '' : 'disabled'}}" bindtap="onSubmitAnalysis" disabled="{{!videoUrl || isAnalyzing}}">
+        <view class="btn-content">
+          <text class="btn-icon">▶</text>
+          <text class="btn-text">{{isAnalyzing ? '分析中...' : '开始分析'}}</text>
+        </view>
+      </button>
+    </view>
+
+    <!-- 功能介绍 -->
+    <view class="features-section">
+      <view class="section-header">
+        <text class="header-title">能力</text>
+      </view>
+      <view class="features-grid">
+        <view class="feature-item">
+          <text class="feature-icon">N</text>
+          <view class="feature-content">
+            <text class="feature-title">智能摘要</text>
+            <text class="feature-desc">快速获取视频核心内容</text>
+          </view>
+        </view>
+        <view class="feature-item">
+          <text class="feature-icon">S</text>
+          <view class="feature-content">
+            <text class="feature-title">章节速览</text>
+            <text class="feature-desc">AI 自动划分视频章节</text>
+          </view>
+        </view>
+        <view class="feature-item">
+          <text class="feature-icon">M</text>
+          <view class="feature-content">
+            <text class="feature-title">思维导图</text>
+            <text class="feature-desc">结构化呈现知识点</text>
+          </view>
+        </view>
+        <view class="feature-item">
+          <text class="feature-icon">T</text>
+          <view class="feature-content">
+            <text class="feature-title">完整字幕</text>
+            <text class="feature-desc">自动转录视频语音</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 登录模态框 -->
+  <view class="auth-modal" wx:if="{{showAuthModal}}">
+    <view class="modal-backdrop" bindtap="onCloseAuthModal"></view>
+    <view class="modal-card" catchtap="noop">
+      <view class="modal-icon">O</view>
+      <text class="modal-title">Omni-Notes</text>
+      <text class="modal-subtitle">AI 视频笔记助手</text>
+      <text class="modal-desc">登录后即可开始分析视频，获得完整的 AI 笔记和分析结果</text>
+      <button class="wechat-login-btn" bindtap="onWechatLogin" disabled="{{isNavigatingToLogin}}">
+        <text class="btn-icon-wechat">W</text>
+        <text class="btn-text-wechat">微信登录</text>
+      </button>
+      <button class="guest-btn" bindtap="onGuestLogin" disabled="{{isNavigatingToLogin}}">游客模式</button>
+    </view>
+  </view>
+</view>

@@ -1,332 +1,193 @@
-# Omni-Notes - 智能视频笔记助手
+# Omni-Notes v2.0
 
-📝 一款基于AI的B站视频内容分析工具，支持语音转文字、智能摘要、章节划分、思维导图生成、多语言翻译等功能。
+AI 驱动的视频分析平台，支持 Bilibili 和抖音视频的内容提取与智能分析。
 
-## ✨ 功能特性
+![Version](https://img.shields.io/badge/version-2.0.0-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-### 核心功能
-- **🎬 视频解析**：支持B站视频链接，自动提取视频信息
-- **📝 语音转文字**：使用OpenAI Whisper模型，支持中文语音识别
-- **🤖 AI智能摘要**：基于通义千问/ChatGPT等大模型生成内容摘要
-- **📑 章节速览**：AI自动划分视频章节，标注时间节点
-- **🧠 思维导图**：生成视频知识结构图
-- **💬 智能问答**：基于视频内容进行问答对话
-- **🌐 多语言翻译**：一键翻译全部内容为英文、日文、韩文等多种语言
-- **📁 分组管理**：拖拽式任务分组，支持自定义分组
-- **💾 多格式导出**：支持Markdown、文本、JSON格式导出
+## 功能特性
 
-### 支持的AI提供商
-- 阿里云百炼（通义千问）- 默认
-- OpenAI（GPT-4/GPT-3.5）
-- 自定义OpenAI兼容API
+-  **视频解析**: 支持 Bilibili (b23.tv) 和抖音分享链接
+-  **AI 分析**: 智能摘要、核心要点、章节速览、思维导图
+-  **字幕提取**: 支持字幕下载与 AI 语音识别 (Whisper)
+-  **历史管理**: 分析历史记录，支持分组和收藏
+-  **用户系统**: 支持注册登录和游客模式
+-  **多 AI 支持**: 通义千问 / OpenAI 可选
 
-### 语音模型支持
-- tiny（39M）- 最快，准确度一般
-- base（74M）- 推荐，平衡速度和准确度 ✅
-- small（244M）- 更准但更慢
-- medium（769M）- 最准但最慢
+## 技术栈
 
-## 🚀 快速开始
+### 前端
+- Next.js 14 (App Router)
+- TypeScript 5
+- Tailwind CSS 3.4
+- shadcn/ui
+- Zustand (状态管理)
+- TanStack Query
+
+### 后端
+- FastAPI 0.110
+- SQLAlchemy 2.0 (异步)
+- PostgreSQL 15
+- yt-dlp (视频下载)
+- OpenAI Whisper (语音识别)
+
+## 快速开始
 
 ### 环境要求
-- Node.js 16+
-- Python 3.8+
-- ffmpeg（用于音频处理）
+- Python 3.10+
+- Node.js 18+
+- PostgreSQL 15+
 
-### 安装依赖
+### 1. 克隆项目
 
 ```bash
-# 进入项目目录
-cd Omni-Notes
-
-# 安装Node依赖
-npm install
-
-# 安装Python依赖
-pip3 install yt-dlp openai-whisper
+git clone https://github.com/yourusername/omni-notes.git
+cd omni-notes
 ```
 
-### 配置AI API
-
-1. 访问 http://localhost:5001
-2. 点击「⚙️ 设置」
-3. 配置AI API Key：
-   - 阿里云百炼：填写DashScope API Key
-   - OpenAI：填写OpenAI API Key
-4. 点击「保存设置」
-
-### 启动服务
+### 2. 启动后端
 
 ```bash
+cd backend
+
+# 创建虚拟环境
+conda activate omni-notes 
+
+# 安装依赖
+pip install -r requirements.txt
+
+# 配置环境变量
+cp .env.example .env
+# 编辑 .env，配置数据库和 AI API 密钥
+
+# 初始化数据库
+alembic upgrade head
+
+# 启动服务
+python run.py
+```
+
+后端服务将在 http://localhost:8000 启动
+
+### 3. 启动前端
+
+```bash
+cd frontend
+
+# 安装依赖
+npm install
+
+# 开发模式
+npm run dev
+
+# 生产构建
+npm run build
 npm start
 ```
 
-服务默认运行在 http://localhost:5001
+前端将在 http://localhost:3000 启动
 
-## 📖 使用指南
+### 4. Docker 一键部署
 
-### 分析视频
-
-1. **打开浏览器**：访问 http://localhost:5001
-2. **粘贴视频链接**：输入B站视频URL
-   - 示例：`https://www.bilibili.com/video/BV1xx411c7mD`
-3. **选择选项**：
-   - ☑️ 无字幕时使用语音转文字
-4. **点击「开始分析」**
-5. **等待分析完成**：约需3-5分钟（取决于视频时长）
-6. **查看结果**：
-   - 📝 AI摘要
-   - ⭐ 核心要点
-   - 📑 章节速览
-   - 🧠 思维导图
-   - 📄 完整字幕
-   - 💬 智能问答
-
-### 翻译内容
-
-分析完成后，点击视频标题栏的「🌐 翻译」按钮：
-
-1. 选择目标语言（英语、日语、韩语等8种语言）
-2. 等待翻译完成
-3. 查看对照翻译：
-   - 原文正常显示
-   - 译文以小号字体显示在下方
-4. 点击「✕ 清除翻译」恢复原文
-
-### 分组管理
-
-1. **创建分组**：点击侧边栏「+ 新建」按钮
-2. **拖拽分组**：将历史记录拖拽到分组中
-3. **编辑分组**：点击分组旁的✏️按钮修改名称
-4. **删除分组**：点击🗑️按钮删除分组
-
-### 重新生成
-
-对分析结果不满意？点击「🔄 重新生成」按钮：
-- 重新调用AI分析全部内容
-- 保留原有分组信息
-- 更新历史记录
-
-### 导出笔记
-
-分析完成后，点击「💾 导出」标签页，选择格式：
-- **Markdown**：完整笔记，含标题、摘要、要点、章节、字幕
-- **文本**：纯文本格式
-- **JSON**：结构化数据
-
-## 🔧 技术架构
-
-```
-┌─────────────────────────────────────────────────────────┐
-│  前端 (HTML + CSS + JavaScript)                          │
-│  - 视频输入界面                                          │
-│  - 结果展示（6个标签页）                                  │
-│  - 设置页面                                              │
-│  - 分组管理                                              │
-│  - 翻译功能                                              │
-├─────────────────────────────────────────────────────────┤
-│  后端 (Node.js + Express)                                │
-│  - /api/analyze - 视频分析接口                           │
-│  - /api/ask - 问答接口                                   │
-│  - /api/config - 配置管理                                │
-│  - /api/translate-all - 翻译接口                         │
-│  - /api/regenerate-all - 重新生成接口                     │
-│  - /api/whisper-models - 模型检测                        │
-├─────────────────────────────────────────────────────────┤
-│  数据存储 (IndexedDB)                                    │
-│  - 历史记录                                              │
-│  - 分组信息                                              │
-│  - 翻译缓存                                              │
-├─────────────────────────────────────────────────────────┤
-│  外部服务                                                │
-│  - B站API - 获取视频信息和字幕                            │
-│  - yt-dlp - 下载视频音频                                 │
-│  - Whisper - 语音转文字                                  │
-│  - 通义千问/OpenAI - AI内容分析                           │
-└─────────────────────────────────────────────────────────┘
-```
-
-## 📁 项目结构
-
-```
-Omni-Notes/
-├── server.js              # 后端服务主文件
-├── index.html             # 前端界面
-├── whisper_stream.py      # Whisper流式转录脚本
-├── package.json           # 项目配置
-├── README.md              # 项目说明
-├── config.json            # API配置文件（自动生成）
-├── config.example.json    # 配置模板（参考用）
-├── data/                  # 数据目录
-│   └── *.mp3              # 视频音频缓存
-└── node_modules/          # Node依赖
-```
-
-## ⚙️ 配置说明
-
-### 配置文件
-
-项目根目录包含两个配置文件：
-
-- **`config.json`** - 实际配置文件（由系统自动生成）
-- **`config.example.json`** - 配置模板（参考用）
-
-### 快速配置
-
-1. 复制配置模板：
-   ```bash
-   cp config.example.json config.json
-   ```
-
-2. 编辑 `config.json`，填入你的 API Key：
-   ```json
-   {
-     "aiProvider": "bailian",
-     "apiKey": "your-api-key-here",
-     "baseURL": "https://coding.dashscope.aliyuncs.com/v1",
-     "model": "qwen3.5-plus",
-     "useWhisper": true,
-     "whisperModel": "base",
-     "proxy": {
-       "enabled": false,
-       "type": "direct",
-       "url": "http://127.0.0.1:7890",
-       "apiUrl": "",
-       "username": "",
-       "password": ""
-     }
-   }
-   ```
-
-### 配置项说明
-
-| 字段 | 说明 | 示例 |
-|------|------|------|
-| `aiProvider` | AI提供商 | `bailian` 或 `openai` |
-| `apiKey` | API密钥 | `sk-xxxxx` |
-| `baseURL` | API地址 | `https://coding.dashscope.aliyuncs.com/v1` |
-| `model` | 模型名称 | `qwen3.5-plus` |
-| `useWhisper` | 启用语音转文字 | `true` 或 `false` |
-| `whisperModel` | Whisper模型 | `tiny`/`base`/`small`/`medium` |
-| `proxy.enabled` | 启用代理 | `true` 或 `false` |
-| `proxy.type` | 代理类型 | `direct` 或 `private` |
-| `proxy.url` | 代理地址（直接代理） | `http://127.0.0.1:7890` |
-| `proxy.apiUrl` | 代理API（私密代理） | `https://dps.kdlapi.com/api/getdps/?...` |
-| `proxy.username` | 代理用户名（私密代理） | `username` |
-| `proxy.password` | 代理密码（私密代理） | `password` |
-
-#### 代理配置说明
-
-**代理系统架构**
-
-系统支持**双层代理**：
-1. **下载代理**（yt-dlp）：用于视频音频下载
-2. **隧道代理**（axios）：用于 B站 API 请求（获取视频信息、字幕等）
-
-**直接代理模式**（适用于本地代理服务）
-```json
-{
-  "proxy": {
-    "enabled": true,
-    "type": "direct",
-    "url": "http://127.0.0.1:7890"
-  }
-}
-```
-
-此模式下：
-- ✅ 直接代理 URL 用于 yt-dlp 下载
-- ✅ 相同代理 URL 用于 axios API 请求（自动处理认证）
-- ✅ 无需额外配置
-
-**私密代理模式**（适用于付费代理服务，如快代理亚马逊云、讯代理等）
-```json
-{
-  "proxy": {
-    "enabled": true,
-    "type": "private",
-    "apiUrl": "https://dps.kdlapi.com/api/getdps/?secret_id=xxx&signature=xxx&num=1&sep=1",
-    "username": "d2072651992",
-    "password": "1ngjc7uy"
-  }
-}
-```
-
-**私密代理工作原理**：
-1. **下载代理**：从代理API获取动态代理IP，拼接认证信息 `http://user:pass@ip/`，传递给 yt-dlp 下载视频
-2. **隧道代理**：相同代理URL用于 axios 请求（获取视频信息、字幕等），自动处理 HTTP 认证
-3. 如果代理获取失败，系统自动降级为无代理模式，继续处理任务
-
-**双层代理的优势**：
-- 🔄 **一次配置，全局应用**：所有网络请求自动使用已配置的代理
-- 🛡️ **双重保护**：下载和 API 请求都通过代理，加强隐私保护
-- 🚀 **高效稳定**：代理失败时自动降级，不影响用户体验
-- 📊 **灵活扩展**：支持私密代理 API、直接代理 URL 等多种模式
-
-## 🎯 模型文件
-
-Whisper模型文件自动下载到 `~/.cache/whisper/`：
-- base.pt (74MB) - 多语言模型 ✅ 推荐
-- base.en.pt (39MB) - 英文模型
-- small.pt (244MB)
-- medium.pt (769MB)
-- tiny.pt (39MB)
-
-## 🐛 常见问题
-
-### Q: 提示"语音转文字失败"
-A: 检查是否已安装yt-dlp和whisper：
 ```bash
-pip3 install yt-dlp openai-whisper
+# 配置环境变量
+cp backend/.env.example .env
+# 编辑 .env 文件
+
+# 启动所有服务
+docker-compose up -d
 ```
 
-### Q: 模型下载失败
-A: 手动下载模型文件到 `~/.cache/whisper/` 目录
+访问 http://localhost:3000
 
-### Q: 服务端口变化
-A: 端口已固定为5001，访问 http://localhost:5001
+## 项目结构
 
-### Q: 配置后仍显示设置界面
-A: 刷新页面，已配置会自动进入主界面
+```
+omni-notes/
+├── backend/           # FastAPI 后端
+│   ├── app/
+│   │   ├── main.py
+│   │   ├── routers/   # API 路由
+│   │   ├── services/  # 业务逻辑
+│   │   └── models/    # 数据模型
+│   ├── requirements.txt
+│   └── Dockerfile
+│
+├── frontend/          # Next.js 前端
+│   ├── app/          # 页面路由
+│   ├── components/   # UI 组件
+│   ├── stores/       # 状态管理
+│   └── Dockerfile
+│
+├── docker-compose.yml
+└── DEPLOY.md         # 详细部署文档
+```
 
-### Q: 如何配置私密代理？
-A: 参考上方"代理配置说明"的私密代理模式配置
+## 配置说明
 
-### Q: 下载视频时提示412错误
-A: 在设置中配置B站Cookie：
-1. 浏览器登录B站
-2. F12打开开发者工具，Console输入 `document.cookie`
-3. 复制Cookie到设置页面的「B站Cookie」字段
+### 后端环境变量 (.env)
 
-### Q: 分组信息丢失
-A: 分组信息保存在浏览器IndexedDB中，清除浏览器数据会导致丢失
+```env
+# 数据库 (必需)
+DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/omni_notes
 
-## 📝 更新日志
+# 安全 (必需)
+COOKIE_ENCRYPTION_KEY=your-secret-key-must-be-32-bytes-long!
 
-### v1.1.0 (2026-03-12)
-- ✅ 新增多语言翻译功能（8种语言）
-- ✅ 新增分组管理功能（拖拽分组）
-- ✅ 新增重新生成功能
-- ✅ 优化语音转文字实时进度显示
-- ✅ 优化AI分析分步骤执行
-- ✅ 数据持久化（IndexedDB）
+# AI 配置 (必需)
+AI_PROVIDER=bailian      # bailian 或 openai
+AI_API_KEY=your-api-key
+AI_MODEL=qwen-max        # qwen-max, gpt-4, 等
 
-### v1.0.0 (2026-03-11)
-- ✅ 基础功能完成
-- ✅ 支持CC字幕提取
-- ✅ 支持语音转文字
-- ✅ AI摘要生成
-- ✅ 章节划分
-- ✅ 思维导图
-- ✅ 智能问答
-- ✅ 多格式导出
+# 可选配置
+USE_WHISPER=true
+WHISPER_MODEL=base
+MAX_CONCURRENT_TASKS=2
+```
 
-## 📄 License
+### 前端环境变量
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+## API 文档
+
+启动后端后访问:
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+
+## 部署
+
+详细部署文档请参考 [DEPLOY.md](./DEPLOY.md)
+
+支持部署方式:
+- 手动部署
+- Docker Compose
+- Kubernetes (待完善)
+
+## 开发计划
+
+- [x] 用户认证系统
+- [x] 视频解析 (B站/抖音)
+- [x] AI 分析核心
+- [x] 历史记录管理
+- [x] 分组功能
+- [ ] 浏览器插件
+- [ ] 移动端 App
+- [ ] 多语言支持
+
+## 贡献
+
+欢迎提交 Issue 和 Pull Request!
+
+## 许可证
 
 MIT License
 
-## 🙏 致谢
+## 致谢
 
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) - 视频下载
 - [OpenAI Whisper](https://github.com/openai/whisper) - 语音识别
-- [通义千问](https://tongyi.aliyun.com/) - AI大模型
+- [FastAPI](https://fastapi.tiangolo.com/) - Web 框架
+- [Next.js](https://nextjs.org/) - React 框架

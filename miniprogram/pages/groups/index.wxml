@@ -1,0 +1,180 @@
+<!--pages/groups/index.wxml - 分组管理页-->
+<view class="page-container">
+  <!-- 顶部导航 -->
+  <view class="nav-header">
+    <view class="nav-left"></view>
+    <text class="page-title">分组</text>
+    <view class="nav-right"></view>
+  </view>
+
+  <!-- 分组标签栏 -->
+  <view class="group-tabs">
+    <scroll-view class="tabs-scroll" scroll-x="true" enhanced="true" show-scrollbar="false">
+      <view class="tabs-list">
+        <view
+          class="tab-item {{currentGroupId === 'ungrouped' ? 'active' : ''}}"
+          data-group-id="ungrouped"
+          bindtap="onTabChange"
+        >
+          <text class="tab-icon">📋</text>
+          <text class="tab-name">未分组</text>
+          <text class="tab-count" wx:if="{{ungroupedCount > 0}}">{{ungroupedCount}}</text>
+        </view>
+        <!-- 分组列表 -->
+        <block wx:if="{{groups && groups.length > 0}}">
+          <view
+            class="tab-item {{currentGroupId === item.id ? 'active' : ''}}"
+            wx:for="{{groups}}"
+            wx:key="id"
+            data-group-id="{{item.id}}"
+            bindtap="onTabChange"
+          >
+            <text class="tab-icon">📁</text>
+            <text class="tab-name">{{item.name}}</text>
+            <text class="tab-count" wx:if="{{item.video_count > 0}}">{{item.video_count}}</text>
+          </view>
+        </block>
+        <!-- 当没有分组时显示提示 -->
+        <view class="tab-item disabled" wx:if="{{groups && groups.length === 0}}">
+          <text class="tab-icon">➕</text>
+          <text class="tab-name">暂无分组</text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 内容区 -->
+  <scroll-view class="content-area" scroll-y="true" enhanced="true" show-scrollbar="false">
+    <!-- 分组下的任务列表 -->
+    <view class="task-list" wx:if="{{currentTasks.length > 0}}">
+      <view class="task-card" wx:for="{{currentTasks}}" wx:key="id">
+        <view class="task-thumb">
+          <image class="thumb-image" src="{{item.thumbnail || '/images/default-thumb.png'}}" mode="aspectFill" />
+          <view class="platform-badge {{item.platform}}">
+            <text>{{item.platform === 'bilibili' ? 'B站' : '抖音'}}</text>
+          </view>
+        </view>
+        <view class="task-info">
+          <text class="task-title">{{item.title || '视频分析'}}</text>
+          <view class="task-meta">
+            <text class="task-time">{{item.created_at}}</text>
+          </view>
+          <view class="task-tags">
+            <text class="tag" wx:if="{{item.analysis_type}}">{{item.analysis_type}}</text>
+          </view>
+        </view>
+        <view class="task-actions">
+          <button class="action-btn" data-task-id="{{item.id}}" bindtap="onMoveToGroup">
+            <text class="action-icon">↗</text>
+          </button>
+        </view>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <view class="empty-state" wx:if="{{currentTasks.length === 0 && !isLoading}}">
+      <view class="empty-icon-wrap">
+        <view class="empty-icon">{{currentGroupId === 'ungrouped' ? '📋' : '📁'}}</view>
+      </view>
+      <text class="empty-title">{{currentGroupId === 'ungrouped' ? '暂无未分组任务' : '分组为空'}}</text>
+      <text class="empty-desc">{{currentGroupId === 'ungrouped' ? '创建分组来管理你的视频分析任务' : '此分组下暂无分析任务'}}</text>
+    </view>
+
+    <!-- 底部留白 -->
+    <view class="bottom-spacer"></view>
+  </scroll-view>
+
+  <!-- 底部操作栏 -->
+  <view class="bottom-bar">
+    <button class="add-btn" bindtap="onShowAddModal">
+      <text class="add-icon">+</text>
+      <text class="add-text">新建分组</text>
+    </button>
+  </view>
+
+  <!-- 新建分组弹窗 -->
+  <view class="modal" wx:if="{{showModal}}">
+    <view class="modal-backdrop" bindtap="onCloseModal"></view>
+    <view class="modal-content">
+      <view class="modal-header">
+        <text class="modal-title">新建分组</text>
+        <button class="modal-close" bindtap="onCloseModal">
+          <text>✕</text>
+        </button>
+      </view>
+      <view class="form-group">
+        <text class="form-label">分组名称</text>
+        <input
+          class="form-input"
+          type="text"
+          placeholder="请输入分组名称"
+          value="{{formData.name}}"
+          bindinput="onNameInput"
+        />
+      </view>
+      <view class="form-group">
+        <text class="form-label">分组描述</text>
+        <input
+          class="form-input"
+          type="text"
+          placeholder="请输入分组描述（可选）"
+          value="{{formData.description}}"
+          bindinput="onDescInput"
+        />
+      </view>
+      <view class="modal-actions">
+        <button class="btn btn-secondary" bindtap="onCloseModal">取消</button>
+        <button class="btn btn-primary" bindtap="onSaveGroup">保存</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 移动到分组弹窗 -->
+  <view class="modal" wx:if="{{showMoveModal}}">
+    <view class="modal-backdrop" bindtap="onCloseMoveModal"></view>
+    <view class="modal-content">
+      <view class="modal-header">
+        <text class="modal-title">移动到分组</text>
+        <button class="modal-close" bindtap="onCloseMoveModal">
+          <text>✕</text>
+        </button>
+      </view>
+      <view class="move-list">
+        <view
+          class="move-item"
+          wx:for="{{groups}}"
+          wx:key="id"
+          data-group-id="{{item.id}}"
+          bindtap="onConfirmMove"
+        >
+          <text class="move-icon">📁</text>
+          <text class="move-name">{{item.name}}</text>
+          <text class="move-count">{{item.video_count || 0}} 个视频</text>
+        </view>
+        <view
+          class="move-item"
+          data-group-id="ungrouped"
+          bindtap="onConfirmMove"
+        >
+          <text class="move-icon">📋</text>
+          <text class="move-name">未分组</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 删除确认弹窗 -->
+  <view class="modal" wx:if="{{showDeleteModal}}">
+    <view class="modal-backdrop" bindtap="onCloseDeleteModal"></view>
+    <view class="modal-content delete-modal">
+      <view class="modal-header">
+        <text class="modal-title">删除分组</text>
+      </view>
+      <text class="delete-desc">确定要删除分组"{{deleteGroupName}}"吗？分组下的任务将移至未分组。</text>
+      <view class="modal-actions">
+        <button class="btn btn-secondary" bindtap="onCloseDeleteModal">取消</button>
+        <button class="btn btn-danger" bindtap="onConfirmDelete">删除</button>
+      </view>
+    </view>
+  </view>
+</view>

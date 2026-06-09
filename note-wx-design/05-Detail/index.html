@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Omni-Notes 分析详情页原型</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f5f7;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    header { text-align: center; margin-bottom: 32px; }
+    h1 { font-size: 24px; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; }
+    .subtitle { font-size: 14px; color: #8b8b9e; }
+    .preview-grid { display: flex; justify-content: center; gap: 32px; flex-wrap: wrap; }
+    .phone-frame {
+      width: 300px;
+      height: 580px;
+      background: #1a1a2e;
+      border-radius: 40px;
+      padding: 10px;
+      box-shadow: 0 20px 40px -12px rgba(0,0,0,0.25);
+    }
+    .phone-screen {
+      width: 100%;
+      height: 100%;
+      background: #ffffff;
+      border-radius: 30px;
+      overflow: hidden;
+      position: relative;
+    }
+    .phone-notch {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100px;
+      height: 24px;
+      background: #1a1a2e;
+      border-radius: 0 0 16px 16px;
+      z-index: 100;
+    }
+    .screen-content {
+      width: 100%;
+      height: 100%;
+      padding: 50px 16px 70px;
+      display: flex;
+      flex-direction: column;
+    }
+    /* 页面样式 */
+    .brand-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .brand-logo { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #1a1a2e 0%, #4a4a6a 100%); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: white; }
+    .brand-info { display: flex; flex-direction: column; }
+    .brand-name { font-size: 16px; font-weight: 700; color: #1a1a2e; }
+    .brand-slogan { font-size: 11px; color: #8b8b9e; }
+    .back-nav { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; font-size: 12px; color: #7c3aed; }
+    .back-icon { font-size: 14px; }
+    /* 视频卡片 */
+    .video-card { background: #f8f9fc; border-radius: 12px; padding: 10px; display: flex; gap: 10px; margin-bottom: 12px; }
+    .video-thumb { width: 80px; height: 54px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; position: relative; flex-shrink: 0; }
+    .platform-badge { position: absolute; top: 4px; left: 4px; padding: 2px 5px; background: #00A1D6; border-radius: 4px; font-size: 8px; color: white; }
+    .play-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+    .play-btn { width: 28px; height: 28px; background: rgba(255,255,255,0.95); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #7c3aed; }
+    .video-info { flex: 1; }
+    .video-title { font-size: 12px; font-weight: 600; color: #1a1a2e; line-height: 1.4; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .video-meta { font-size: 11px; color: #999; }
+    /* 标签页 */
+    .tabs-section { background: #ffffff; border-radius: 14px; overflow: hidden; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); flex: 1; display: flex; flex-direction: column; }
+    .tabs-header { display: flex; gap: 10px; padding: 0 16px 12px; }
+    .tab-btn { flex: 1; text-align: center; padding: 8px 6px; font-size: 13px; color: #666; border-radius: 8px; cursor: pointer; background: #f5f5f5; border: 1px solid transparent; }
+    .tab-btn.active { background: #7c3aed; color: #ffffff; }
+    .tab-btn:active { opacity: 0.8; }
+    .tab-content { padding: 12px; flex: 1; overflow-y: auto; }
+    .panel-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .panel-icon { width: 24px; height: 24px; background: #f0f0f5; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #666; }
+    .panel-title { font-size: 12px; font-weight: 600; color: #1a1a2e; flex: 1; }
+    .copy-btn { display: flex; align-items: center; gap: 4px; padding: 4px 8px; background: #f8f9fc; border-radius: 6px; font-size: 10px; color: #999; }
+    .summary-content { background: #f8f9fc; border-radius: 10px; padding: 12px; }
+    .summary-text { font-size: 12px; color: #666; line-height: 1.6; }
+    /* 要点列表 */
+    .keypoints-list { display: flex; flex-direction: column; gap: 8px; }
+    .keypoint-item { display: flex; gap: 10px; padding: 10px; background: #f8f9fc; border-radius: 10px; }
+    .point-marker { width: 20px; height: 20px; background: #7c3aed; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; color: white; flex-shrink: 0; }
+    .point-content { flex: 1; }
+    .point-title { font-size: 12px; font-weight: 600; color: #1a1a2e; margin-bottom: 3px; }
+    .point-time { font-size: 10px; color: #999; }
+    /* 思维导图 */
+    .mindmap-placeholder { background: #f8f9fc; border-radius: 10px; padding: 30px; text-align: center; }
+    .mindmap-icon { font-size: 32px; color: #ccc; margin-bottom: 8px; }
+    .mindmap-text { font-size: 11px; color: #999; }
+    /* 字幕 */
+    .transcript-list { display: flex; flex-direction: column; gap: 6px; }
+    .transcript-item { display: flex; gap: 8px; padding: 8px; background: #f8f9fc; border-radius: 8px; }
+    .segment-time { font-size: 10px; color: #999; flex-shrink: 0; min-width: 40px; }
+    .segment-text { font-size: 11px; color: #666; line-height: 1.4; flex: 1; }
+    /* 底部操作栏 - 已移除 */
+    /* TabBar */
+    .tab-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 60px; background: #ffffff; border-top: 1px solid #f0f0f5; display: flex; }
+    .tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+    .tab-icon { font-size: 20px; color: #8b8b9e; }
+    .tab-label { font-size: 10px; color: #8b8b9e; }
+    .tab-item.active .tab-icon, .tab-item.active .tab-label { color: #7c3aed; }
+    /* Tab 点击效果 */
+    .tab-btn:active { opacity: 0.7; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>分析详情页原型</h1>
+      <p class="subtitle">Tab 点击切换效果</p>
+    </header>
+
+    <div class="preview-grid">
+      <!-- Tab 切换演示 -->
+      <div class="screenshot-item">
+        <div class="phone-frame">
+          <div class="phone-screen">
+            <div class="phone-notch"></div>
+            <div class="screen-content">
+              <!-- 品牌头部 -->
+              <div class="brand-header">
+                <div class="brand-logo">O</div>
+                <div class="brand-info">
+                  <span class="brand-name">Omni-Notes</span>
+                  <span class="brand-slogan">AI 视频笔记</span>
+                </div>
+              </div>
+
+              <!-- 返回导航 -->
+              <div class="back-nav">
+                <span class="back-icon">←</span>
+                <span>返回</span>
+                <span style="color: #1a1a2e; margin-left: 8px;">分析详情</span>
+              </div>
+
+              <!-- 视频卡片 -->
+              <div class="video-card">
+                <div class="video-thumb">
+                  <span class="platform-badge">B站</span>
+                  <div class="play-overlay"><div class="play-btn">▶</div></div>
+                </div>
+                <div class="video-info">
+                  <div class="video-title">2024年AI发展趋势深度解析</div>
+                  <div class="video-meta">科技频道 · 2024-01-15</div>
+                </div>
+              </div>
+
+              <!-- 标签页 -->
+              <div class="tabs-section">
+                <div class="tabs-header">
+                  <div class="tab-btn active" onclick="switchTab(this, 'summary')">摘要</div>
+                  <div class="tab-btn" onclick="switchTab(this, 'keypoints')">要点</div>
+                  <div class="tab-btn" onclick="switchTab(this, 'mindmap')">导图</div>
+                  <div class="tab-btn" onclick="switchTab(this, 'transcript')">字幕</div>
+                </div>
+                <div class="tab-content">
+                  <!-- 摘要面板 -->
+                  <div id="panel-summary">
+                    <div class="panel-header">
+                      <div class="panel-icon">◊</div>
+                      <span class="panel-title">视频摘要</span>
+                      <div class="copy-btn"><span>◉</span><span>复制</span></div>
+                    </div>
+                    <div class="summary-content">
+                      <div class="summary-text">本视频详细介绍了2024年AI领域的最新发展趋势，包括大语言模型的多模态能力提升、AI Agents的广泛应用、以及边缘AI的快速发展。
+
+核心要点：
+1. 多模态大模型成为发展主流，从文本向图像、音频、视频扩展
+2. AI Agent应用场景快速扩展，办公、编程、数据分析等领域全面渗透
+3. 边缘AI推动端侧智能普及，隐私保护和实时性得到保障</div>
+                    </div>
+                  </div>
+                  <!-- 要点面板 -->
+                  <div id="panel-keypoints" style="display: none;">
+                    <div class="panel-header">
+                      <div class="panel-icon">◉</div>
+                      <span class="panel-title">核心要点</span>
+                    </div>
+                    <div class="keypoints-list">
+                      <div class="keypoint-item">
+                        <div class="point-marker">1</div>
+                        <div class="point-content">
+                          <div class="point-title">多模态大模型成为发展主流</div>
+                          <div class="point-time">02:15</div>
+                        </div>
+                      </div>
+                      <div class="keypoint-item">
+                        <div class="point-marker">2</div>
+                        <div class="point-content">
+                          <div class="point-title">AI Agent应用场景快速扩展</div>
+                          <div class="point-time">05:32</div>
+                        </div>
+                      </div>
+                      <div class="keypoint-item">
+                        <div class="point-marker">3</div>
+                        <div class="point-content">
+                          <div class="point-title">边缘AI推动端侧智能普及</div>
+                          <div class="point-time">08:47</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- 导图面板 -->
+                  <div id="panel-mindmap" style="display: none;">
+                    <div class="panel-header">
+                      <div class="panel-icon">◈</div>
+                      <span class="panel-title">思维导图</span>
+                    </div>
+                    <div class="mindmap-placeholder">
+                      <div class="mindmap-icon">◈</div>
+                      <div class="mindmap-text">思维导图生成中...</div>
+                    </div>
+                  </div>
+                  <!-- 字幕面板 -->
+                  <div id="panel-transcript" style="display: none;">
+                    <div class="panel-header">
+                      <div class="panel-icon">◐</div>
+                      <span class="panel-title">字幕内容</span>
+                    </div>
+                    <div class="transcript-list">
+                      <div class="transcript-item">
+                        <span class="segment-time">00:00</span>
+                        <span class="segment-text">大家好，欢迎观看本期视频...</span>
+                      </div>
+                      <div class="transcript-item">
+                        <span class="segment-time">00:15</span>
+                        <span class="segment-text">今天我们来聊一聊2024年AI的发展趋势...</span>
+                      </div>
+                      <div class="transcript-item">
+                        <span class="segment-time">00:32</span>
+                        <span class="segment-text">首先是大语言模型的最新进展...</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- TabBar -->
+              <div class="tab-bar">
+                <div class="tab-item"><span class="tab-icon">◈</span><span class="tab-label">首页</span></div>
+                <div class="tab-item"><span class="tab-icon">◊</span><span class="tab-label">历史</span></div>
+                <div class="tab-item"><span class="tab-icon">◯</span><span class="tab-label">我的</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="text-align: center; margin-top: 12px; font-size: 13px; color: #6b7280;">分析详情 - Tab切换</div>
+      </div>
+    </div>
+
+    <div style="margin-top: 40px; text-align: center; color: #8b8b9e; font-size: 12px;">
+      <p>点击标签页可切换内容面板</p>
+    </div>
+  </div>
+
+  <script>
+    function switchTab(btn, panelId) {
+      // 移除所有active
+      document.querySelectorAll('.tab-btn').forEach(function(t) {
+        t.classList.remove('active');
+      });
+      // 添加active到当前
+      btn.classList.add('active');
+      // 隐藏所有面板
+      document.querySelectorAll('[id^="panel-"]').forEach(function(p) {
+        p.style.display = 'none';
+      });
+      // 显示对应面板
+      document.getElementById('panel-' + panelId).style.display = 'block';
+    }
+  </script>
+</body>
+</html>

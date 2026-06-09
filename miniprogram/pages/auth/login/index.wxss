@@ -1,0 +1,202 @@
+/* pages/auth/login/index.wxss - 登录页浅色简洁风格样式 */
+
+page {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.container {
+  width: 100vw;
+  height: 100vh;
+  box-sizing: border-box;
+  background: linear-gradient(180deg, #f8f9fc 0%, #ffffff 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 0 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ========== 内容区域 ========== */
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 300px;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
+}
+
+/* ========== Logo区域 ========== */
+.logo {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: #6b6b7e;
+  margin-bottom: 48px;
+  font-weight: 400;
+}
+
+/* ========== 错误提示 ========== */
+.error-message {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  padding: 12px 16px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  font-size: 13px;
+  text-align: center;
+  width: 100%;
+  max-width: 300px;
+  box-sizing: border-box;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* ========== 主要登录按钮 ========== */
+.main-login {
+  width: 100%;
+  max-width: 300px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btn-wechat {
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
+  color: white;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 16px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  border-radius: 12px;
+  line-height: 1.4;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(7, 193, 96, 0.2);
+}
+
+.btn-wechat:active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 8px rgba(7, 193, 96, 0.15);
+}
+
+.btn-guest {
+  background: #ffffff;
+  color: #6b6b7e;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 16px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  line-height: 1.4;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.btn-guest:active {
+  background: #f5f6fa;
+  border-color: rgba(0, 0, 0, 0.12);
+  transform: scale(0.98);
+}
+
+button[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ========== 其他登录方式 ========== */
+.other-login {
+  width: 100%;
+  max-width: 300px;
+  box-sizing: border-box;
+  margin-top: 24px;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.line {
+  height: 1px;
+  background: rgba(0, 0, 0, 0.08);
+  flex: 1;
+}
+
+.divider .text {
+  color: #a0a0b0;
+  font-size: 12px;
+  padding: 0 12px;
+  font-weight: 500;
+}
+
+.other-login .link {
+  display: block;
+  text-align: center;
+  color: #6b6b7e;
+  font-size: 13px;
+  padding: 8px;
+  transition: all 0.3s ease;
+}
+
+.other-login .link:active {
+  color: #7c3aed;
+}
+
+/* ========== 用户协议 ========== */
+.agreement {
+  margin-top: 32px;
+  width: 100%;
+  max-width: 300px;
+  box-sizing: border-box;
+  font-size: 11px;
+  color: #a0a0b0;
+  line-height: 1.6;
+}
+
+.agreement-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.agreement-checkbox {
+  transform: scale(0.78);
+  transform-origin: left top;
+  flex-shrink: 0;
+}
+
+.agreement-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.agreement .link {
+  color: #6b6b7e;
+  text-decoration: underline;
+}
+
+.agreement .link:active {
+  color: #7c3aed;
+}

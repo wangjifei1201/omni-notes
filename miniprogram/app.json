@@ -1,0 +1,49 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/history/index",
+    "pages/profile/index",
+    "pages/analysis/detail/index",
+    "pages/auth/login/index",
+    "pages/auth/register/index",
+    "pages/groups/index"
+  ],
+  "window": {
+    "backgroundColor": "#f8f9fc",
+    "backgroundTextStyle": "dark",
+    "navigationBarBackgroundColor": "#f8f9fc",
+    "navigationBarTitleText": "Omni-Notes",
+    "navigationBarTextStyle": "black",
+    "navigationStyle": "custom"
+  },
+  "tabBar": {
+    "color": "#6b6b7e",
+    "selectedColor": "#7c3aed",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "images/icons/home.png",
+        "selectedIconPath": "images/icons/home-active.png"
+      },
+      {
+        "pagePath": "pages/history/index",
+        "text": "历史",
+        "iconPath": "images/icons/goods.png",
+        "selectedIconPath": "images/icons/goods-active.png"
+      },
+      {
+        "pagePath": "pages/profile/index",
+        "text": "我的",
+        "iconPath": "images/icons/usercenter.png",
+        "selectedIconPath": "images/icons/usercenter-active.png"
+      }
+    ]
+  },
+  "sitemapLocation": "sitemap.json",
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents",
+  "usingComponents": {}
+}
