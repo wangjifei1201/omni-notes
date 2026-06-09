@@ -9,6 +9,7 @@ Page({
     showAuthModal: false,
     isLoggedIn: false,
     focused: false,
+    isNavigatingToLogin: false,
   },
 
   onLoad() {
@@ -21,10 +22,9 @@ Page({
 
   checkLoginStatus() {
     const userId = wx.getStorageSync('user_id');
-    const isLoggedIn = !!userId;
+    const token = wx.getStorageSync('auth_token');
     this.setData({
-      isLoggedIn,
-      showAuthModal: !isLoggedIn,
+      isLoggedIn: !!userId && !!token,
     });
   },
 
@@ -75,13 +75,31 @@ Page({
       .finally(() => this.setData({ isAnalyzing: false }));
   },
 
+  goLoginPage() {
+    if (this.data.isNavigatingToLogin) return;
+
+    this.setData({
+      showAuthModal: false,
+      isNavigatingToLogin: true,
+    });
+
+    wx.navigateTo({
+      url: '/pages/auth/login/index',
+      complete: () => {
+        this.setData({ isNavigatingToLogin: false });
+      },
+    });
+  },
+
   onGuestLogin() {
-    this.setData({ showAuthModal: false, isLoggedIn: true });
+    this.goLoginPage();
   },
 
   onWechatLogin() {
-    wx.navigateTo({ url: '/pages/auth/login/index' });
+    this.goLoginPage();
   },
+
+  noop() {},
 
   onCloseAuthModal() {
     this.setData({ showAuthModal: false });

@@ -32,17 +32,24 @@
         <view class="line"></view>
       </view>
 
-      <navigator class="link" url="/pages/auth/register/index">
+      <view class="link" bindtap="onEmailLogin">
         使用邮箱注册/登录
-      </navigator>
+      </view>
     </view>
 
     <!-- 用户协议 -->
     <view class="agreement">
-      <text>登录即表示同意</text>
-      <text class="link">《用户协议》</text>
-      <text>和</text>
-      <text class="link">《隐私政策》</text>
+      <checkbox-group bindchange="onAgreementChange">
+        <view class="agreement-label">
+          <checkbox class="agreement-checkbox" value="accepted" checked="{{acceptedAgreement}}" color="#7c3aed" />
+          <view class="agreement-text">
+            <text>我已阅读并同意</text>
+            <text class="link" catchtap="openUserAgreement">《用户服务协议》</text>
+            <text>及</text>
+            <text class="link" catchtap="openPrivacyPolicy">《隐私政策》</text>
+          </view>
+        </view>
+      </checkbox-group>
     </view>
   </view>
 </view>

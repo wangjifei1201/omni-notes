@@ -1,4 +1,5 @@
 // pages/profile/index.js
+const { authApi } = require('../../utils/api');
 const store = require('../../utils/store');
 
 Page({
@@ -127,6 +128,33 @@ AI 视频笔记助手
 © 2024 Omni-Notes`,
       showCancel: false,
       confirmText: '知道了',
+    });
+  },
+
+  // 退出登录
+  onLogout() {
+    wx.showModal({
+      title: '退出登录',
+      content: '确定要退出当前账号吗？',
+      confirmText: '退出',
+      confirmColor: '#ef4444',
+      success: async (res) => {
+        if (!res.confirm) return;
+
+        wx.showLoading({ title: '退出中...' });
+        try {
+          await authApi.logout();
+        } catch (error) {
+          console.warn('后端退出登录失败，继续清理本地登录态:', error);
+        } finally {
+          store.logout();
+          wx.hideLoading();
+          wx.showToast({ title: '已退出登录', icon: 'success' });
+          setTimeout(() => {
+            wx.switchTab({ url: '/pages/index/index' });
+          }, 500);
+        }
+      },
     });
   },
 });

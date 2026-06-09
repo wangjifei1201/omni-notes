@@ -29,19 +29,48 @@ Page({
     sortOptions: [
       { label: '最新', value: 'recent' },
     ],
-    startX: 0,
     delBtnWidth: 80,
+    isRedirectingToLogin: false,
   },
 
   async onLoad() {
+    if (!this.ensureLogin()) return;
+
     await this.loadGroups();
     this.loadHistory();
   },
 
   async onShow() {
     // 每次显示时刷新历史记录和分组
+    if (!this.ensureLogin()) return;
+
     await this.loadGroups();
     this.loadHistory();
+  },
+
+  ensureLogin() {
+    const token = wx.getStorageSync('auth_token');
+    const userId = wx.getStorageSync('user_id');
+    if (token && userId) return true;
+
+    this.setData({
+      history: [],
+      filteredHistory: [],
+      groups: [],
+      isLoading: false,
+      error: null,
+    });
+
+    if (this.data.isRedirectingToLogin) return false;
+    this.setData({ isRedirectingToLogin: true });
+
+    wx.navigateTo({
+      url: '/pages/auth/login/index',
+      complete: () => {
+        this.setData({ isRedirectingToLogin: false });
+      },
+    });
+    return false;
   },
 
   // 加载历史记录

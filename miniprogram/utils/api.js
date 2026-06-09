@@ -19,6 +19,7 @@ function buildQueryString(params = {}) {
 
 // API 地址配置
 const API_BASE_URL = config.apiUrl;
+let isRedirectingToLogin = false;
 
 // 获取存储的token
 function getToken() {
@@ -61,10 +62,18 @@ function request(method, url, data = null, options = {}) {
         if (res.statusCode === 200 || res.statusCode === 201) {
           resolve(res.data);
         } else if (res.statusCode === 401) {
-          // 清除token，跳转到登录
+          // 清除token，并避免并发请求重复打开登录页
           wx.removeStorageSync('auth_token');
           wx.removeStorageSync('user_id');
-          wx.navigateTo({ url: '/pages/auth/login/index' });
+          if (!isRedirectingToLogin) {
+            isRedirectingToLogin = true;
+            wx.navigateTo({
+              url: '/pages/auth/login/index',
+              complete: () => {
+                isRedirectingToLogin = false;
+              },
+            });
+          }
           reject(new Error('未授权，请重新登录'));
         } else {
           const errorMsg = res.data?.detail || res.data?.message || `请求失败 (${res.statusCode})`;

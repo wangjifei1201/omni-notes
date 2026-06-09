@@ -96,16 +96,16 @@
   <!-- 登录模态框 -->
   <view class="auth-modal" wx:if="{{showAuthModal}}">
     <view class="modal-backdrop" bindtap="onCloseAuthModal"></view>
-    <view class="modal-card">
+    <view class="modal-card" catchtap="noop">
       <view class="modal-icon">O</view>
       <text class="modal-title">Omni-Notes</text>
       <text class="modal-subtitle">AI 视频笔记助手</text>
       <text class="modal-desc">登录后即可开始分析视频，获得完整的 AI 笔记和分析结果</text>
-      <button class="wechat-login-btn" bindtap="onWechatLogin">
+      <button class="wechat-login-btn" bindtap="onWechatLogin" disabled="{{isNavigatingToLogin}}">
         <text class="btn-icon-wechat">W</text>
         <text class="btn-text-wechat">微信登录</text>
       </button>
-      <button class="guest-btn" bindtap="onGuestLogin">游客模式</button>
+      <button class="guest-btn" bindtap="onGuestLogin" disabled="{{isNavigatingToLogin}}">游客模式</button>
     </view>
   </view>
 </view>
